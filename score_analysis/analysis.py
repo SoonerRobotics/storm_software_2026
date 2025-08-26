@@ -1,0 +1,1 @@
+#TODO: like actual math. maybe lagrange multipliers. linear algebra or something.
