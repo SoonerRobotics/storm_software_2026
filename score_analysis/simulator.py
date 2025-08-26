@@ -168,15 +168,17 @@ class GameController():
         while game_tick < FOUR_MINUTES:
             # manage game state
             if game_tick >= THIRTY_SECONDS and game_state is not GameState.TELEOP:
-                self.game_state = GameState.TELEOP
+                game_state = GameState.TELEOP
 
             # get task from robot
             task = robot.get_task(game_tick, current_task, game_state, kilojoules, capacity)
 
             # reset counter if it's a new one
-            if task is not current_task:
+            if task != current_task:
                 ticks_at_task_start = game_tick
                 task_complete = False
+                current_task = task
+
 
             # perform the task
             #TODO FIXME this doesn't account for robot's max_speed or acceleration
@@ -193,6 +195,8 @@ class GameController():
 
                         #TODO FIXME figure out a better way to do this skill check
                         task_succeed = random() > robot.parameters.pickup_reliability
+                        if task_succeed:
+                            robot.has_battery = True
 
                 case Task.LINEUP_SCORE_BATTERY:
                     if (game_tick - ticks_at_task_start) >= toTicks(0, robot.parameters.scoring_speed):
@@ -236,21 +240,24 @@ class GameController():
             if task_complete:
                 match task:
                     case Task.SCORE_BATTERY:
-                        score += 5 if self.game_state is GameState.TELEOP else 8
+                        score += 5 if game_state is GameState.TELEOP else 8
                         capacity += 1
+                        robot.is_lined_up = False # only scoring tasks have this reset, lineup tasks should not
+                        robot.has_battery = False
                     case Task.CHARGING_WHEEL:
                         # also TODO FIXME this doesn't double kilos in auto rn
                         kilojoules += 2 #TODO FIXME this is like a points/second thing, that isn't reflected well here
+                        robot.is_lined_up = False
                     case Task.JUMPSTART:
                         #TODO task validation to make sure this is legal???
-                        kilojoules += 5 if self.game_state is GameState.TELEOP else 10
+                        kilojoules += 5 if game_state is GameState.TELEOP else 10
                         last_grid_charge_ticks = game_tick
+                        robot.is_lined_up = False
                     case Task.FLOODWATER:
                         score += 10 #TODO how are we going to differentiate the high climb? check RobotParameters?
                 
                 # and reset
                 current_task = Task.NOTHING
-                robot.is_lined_up = False
                 task_complete = False
 
             # tick the game
@@ -259,7 +266,7 @@ class GameController():
         #TODO FIXME calculate end of match charge scores
         score += min(kilojoules, capacity)
 
-        print(score)
+        print(f"Score: {score}")
 
 def main():
     game = GameController()
