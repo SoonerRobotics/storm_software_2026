@@ -68,36 +68,38 @@ class Robot:
         # robot state
         self.has_battery = True # start with one preloaded
         self.is_climbed = False # once we've climbed we can't do anything else
+        self.is_lined_up = False # are we lined up with whatever we were lining up to do
     
     def get_task(self, game_tick, current_task: Task, score, kilojoules, capacity) -> Task:
+        #TODO FIXME should we even keep track of this? i.e. does this need to be a class variable?
+        self.current_task = current_task
+
         if self.is_climbed:
             return Task.FLOODWATER
 
         if self.game_state is GameState.AUTONOMOUS:
                 #TODO
                 pass
+        
         elif self.game_state is GameState.TELEOP:
             # check if we're in the middle of a task
-            if current_task: #TODO FIXME ???
-                return
+            if current_task is not Task.NOTHING:
+                return current_task # then we should finish it
 
             # check time to see if we need to climb
             if game_tick > toTicks(3, 30): # thirty seconds to climb TODO FIXME pull climb time from robotparemeters
-                return Task.FLOODWATER
+                return Task.FLOODWATER if self.is_lined_up else Task.LINEUP_FLOODWATER
 
             # otherwise, check to see if we haven't jumpstarted in a while
             if self.ticks_since_jumpstart > toTicks(0, 30): #TODO FIXME parameters?
                 #TODO FIXME also check if we even need the kilojoules, and if we'd even have the time to do it
-                return Task.JUMPSTART
-
-            # otherwise, check to see if there's anything else to do
-            #TODO FIXME
+                return Task.JUMPSTART if self.is_lined_up else Task.LINEUP_JUMPSTART
 
             # otherwise, cycle batteries
             if self.has_battery:
-                return Task.SCORE_BATTERY
+                return Task.SCORE_BATTERY if self.is_lined_up else Task.LINEUP_SCORE_BATTERY
             else:
-                return Task.PICKUP_BATTERY
+                return Task.PICKUP_BATTERY if self.is_lined_up else Task.LINEUP_PICKUP_BATTERY
 
 
 class GameState(Enum):
@@ -147,13 +149,14 @@ class GameController():
         game_tick = 0 # every tick is .1 seconds
         game_state = GameState.AUTONOMOUS
 
-        current_task = Task.NONE
+        current_task = Task.NOTHING
 
         score = 0
         kilojoules = 0
         capacity = 0
 
         last_grid_charge_ticks = 0
+        ticks_at_task_start = 0
 
         #TODO FIXME ??? what are we doing here???
         while game_tick < FOUR_MINUTES:
@@ -165,9 +168,41 @@ class GameController():
             # get task from robot
             task = robot.get_task(game_tick, current_task, score, kilojoules, capacity)
 
+            # reset counter if it's a new one
+            if task is not current_task:
+                ticks_at_task_start = game_tick
+                task_complete = False
+
             # perform the task
-            #TODO FIXME
-            task_complete = False
+            match task:
+                #TODO FIXME if all pickup speeds are in seconds we need to convert them to ticks or something
+                #TODO FIXME we're also going to have to check if they're lined up before checking if they pass the score check
+                case Task.LINEUP_PICKUP_BATTERY:
+                    if (game_tick - ticks_at_task_start) >= robot.parameters.pickup_speed:
+                        task_complete = True
+                        robot.is_lined_up = True #TODO FIXME do we want separate booleans for if it's lined up for different tasks?
+                case Task.PICKUP_BATTERY:
+                    pass #TODO FIXME
+
+                case Task.LINEUP_SCORE_BATTERY:
+                    pass #TODO
+                case Task.SCORE_BATTERY:
+                    pass #TODO
+
+                case Task.LINEUP_CHARGING_WHEEL:
+                    pass #TODO
+                case Task.CHARGING_WHEEL:
+                    pass #TODO
+
+                case Task.LINEUP_JUMPSTART:
+                    pass #TODO
+                case Task.JUMPSTART:
+                    pass #TODO
+
+                case Task.LINEUP_FLOODWATER:
+                    pass #TODO
+                case Task.FLOODWATER:
+                    pass #TODO
 
             # score the task
             if task_complete:
@@ -184,6 +219,10 @@ class GameController():
                         last_grid_charge_ticks = game_tick
                     case Task.FLOODWATER:
                         score += 10 #TODO how are we going to differentiate the high climb? check RobotParameters?
+                
+                # and reset
+                current_task = Task.NOTHING
+                task_complete = False
 
             # tick the game
             game_tick += 1
