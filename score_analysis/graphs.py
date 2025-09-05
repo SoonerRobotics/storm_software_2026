@@ -1,5 +1,7 @@
 from math import floor
-import matplotlib
+from matplotlib import colormaps
+import matplotlib.pyplot as plt
+import numpy as np
 
 # point values - we should really move these to a constants file, or a .CSV or .cfg or something
 AUTO_LEAVE_POINTS = 3
@@ -19,21 +21,27 @@ TELEOP_SECONDS = int(60 * 3.5)
 
 # ignoring jumpstart and climb, divvy up time between generating electricity and scoring batteries
 # also ignoring auton
-time_spent_cycling = [s for s in range(1, TELEOP_SECONDS)] # increments of 1 second
+times_spent_cycling = [s for s in range(1, TELEOP_SECONDS)] # increments of 1 second
 # we can filter for more realistic cycling times later
 cycle_times = [t for t in range(1, TELEOP_SECONDS)]
 
-# time to actually calculate points, but we have two independent variables, so need a matrix
-points = []
-for idx, time in enumerate(time_spent_cycling):
-    points.append([]) # add a new row
-    
-    for cycle_time in cycle_times:
-        battery_points = TELEOP_BATTERY_POINTS * floor(time / cycle_time)
-        kilojoules = floor(TELEOP_CHARGING_KILOJOULES * (TELEOP_SECONDS - time)) # per second
+def get_score(cycle_time, time_spent_cycling):
+    battery_points = TELEOP_BATTERY_POINTS * floor(time_spent_cycling / cycle_time)
+    kilojoules = floor(TELEOP_CHARGING_KILOJOULES * (TELEOP_SECONDS - time_spent_cycling)) # per second
 
-        score = battery_points + min(battery_points, kilojoules)
+    return battery_points + min(battery_points, kilojoules)
 
-        points[idx].append(score)
+X, Y = np.meshgrid(cycle_times, times_spent_cycling)
+SCORES = [[get_score(x, y) for x in cycle_times] for y in times_spent_cycling]
 
-print(points)
+# standard matplotlib
+fig, ax = plt.subplots()
+
+# actually graph
+ax.pcolormesh(SCORES, cmap=colormaps.get("viridis"))
+
+plt.title("TeleOp Points")
+plt.xlabel("Cycle Time (seconds)")
+plt.ylabel("Time Spent Cycling (seconds) [as oppossed to generating]")
+
+plt.show()
