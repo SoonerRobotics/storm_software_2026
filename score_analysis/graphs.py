@@ -23,22 +23,22 @@ TELEOP_SECONDS = int(60 * 3.5)
 # also ignoring auton
 times_spent_cycling = [s for s in range(1, TELEOP_SECONDS)] # increments of 1 second
 # we can filter for more realistic cycling times later
-cycle_times = [t for t in range(1, TELEOP_SECONDS)]
+cycle_times = [t for t in range(5, 30)]
 
 def get_score(cycle_time, time_spent_cycling):
-    battery_points = TELEOP_BATTERY_POINTS * floor(time_spent_cycling / cycle_time)
+    battery_points = (TELEOP_BATTERY_POINTS * floor(time_spent_cycling / cycle_time))
+    battery_points = max(battery_points, 20)
     kilojoules = floor(TELEOP_CHARGING_KILOJOULES * (TELEOP_SECONDS - time_spent_cycling)) # per second
 
     return battery_points + min(battery_points, kilojoules)
 
-X, Y = np.meshgrid(cycle_times, times_spent_cycling)
 SCORES = [[get_score(x, y) for x in cycle_times] for y in times_spent_cycling]
 
 # standard matplotlib
 fig, ax = plt.subplots()
 
 # actually graph
-ax.pcolormesh(SCORES, cmap=colormaps.get("viridis"))
+plt.pcolormesh(SCORES, cmap=colormaps.get("viridis"))
 
 plt.title("TeleOp Points")
 plt.xlabel("Cycle Time (seconds)")
