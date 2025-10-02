@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:3000");
+const socket = io("192.168.1.170:3000");
 
 const pc_config = {
   iceServers: []
@@ -18,6 +18,7 @@ pc.onicecandidate = e => {
 }
 
 pc.onconnectionstatechange = e => {
+  console.log('connection state change');
   console.log(e);
 }
 
@@ -30,18 +31,20 @@ socket.on("connect", () => {
   console.log("Connected to signaling server");
 });
 
-socket.on("initiateOffer", () => {
-  createOffer();
+socket.on("initiateOffer", async () => {
+  await setLocalStream();
+  await createOffer();
 })
 
-socket.on("getOffer", (sdp) => {
+socket.on("getOffer", async (sdp) => {
   console.log("Creating answer");
-  createAnswer(sdp);
+  await setLocalStream();
+  await createAnswer(sdp);
 })
 
-socket.on("getAnswer", (sdp) => {
+socket.on("getAnswer", async (sdp) => {
   console.log("Setting remote description")
-  pc.setRemoteDescription(sdp);
+  await pc.setRemoteDescription(sdp);
 })
 
 socket.on("getCandidate", (candidate) => {
@@ -53,38 +56,30 @@ socket.on("getCandidate", (candidate) => {
 
 const createOffer = async () => {
   console.log("create offer");
-  pc
-    .createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
-    .then(sdp => {
-      pc.setLocalDescription(sdp);
-      socket.emit("offer", sdp);
-    })
-    .catch(error => {
-      console.log(error);
-    });
+  try {
+    const sdp = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+    await pc.setLocalDescription(sdp);
+    socket.emit("offer", sdp);
+  } catch (error) {
+    console.error(error);
+  }
 };
 
+
 const createAnswer = async (sdp) => {
-  pc.setRemoteDescription(sdp).then(() => {
-    console.log("answer set remote description success");
-    pc
-      .createAnswer({
-        offerToReceiveVideo: true,
-        offerToReceiveAudio: true,
-      })
-      .then(sdp1 => {
-        console.log("create answer");
-        pc.setLocalDescription(sdp1);
-        socket.emit("answer", sdp1);
-      })
-      .catch(error => {
-        console.log(error);
-      });
-  });
+  try {
+    await pc.setRemoteDescription(sdp);
+    const answer = await pc.createAnswer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+    await pc.setLocalDescription(answer);
+    socket.emit("answer", answer);
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 const setLocalStream = async () => {
   try {
+    console.log("setting local stream");
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     const video = document.getElementById("localCam");
     video.srcObject = stream;
@@ -105,5 +100,4 @@ const setRemoteStream = async (stream) => {
   }
 }
 
-// Run automatically when included
 setLocalStream();

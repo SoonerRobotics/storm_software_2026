@@ -33,6 +33,11 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("getCandidate", candidate);
     console.log("sending candidate, candidate: " + socket.id);
   });
+
+  socket.on("disconnect", reason => {
+    console.log(`client disconnected: ${socket.id} (${reason})`);
+    clients = clients.filter(id => id !== socket.id);
+  })
 });
 
 httpServer.listen(PORT);
