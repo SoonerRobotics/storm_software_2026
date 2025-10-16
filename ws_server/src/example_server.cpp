@@ -14,8 +14,6 @@
 //------------------------------------------------------------------------------
 
 #include <boost/beast/core.hpp>
-#include <boost/beast/core/buffer_traits.hpp>
-
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <cstdlib>
@@ -23,6 +21,8 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <vector>
+#include <future>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -60,17 +60,13 @@ void do_session(tcp::socket socket)
       // Read a message
       ws.read(buffer);
 
-      // Echo the message back
-      // ws.text(ws.got_text());
-
-      std::string incoming = boost::beast::buffers_to_string(buffer.data());
-
-      std::string msg = "echoing: " + incoming;
+      std::string msg = "echoing: " + beast::buffers_to_string(buffer.data());
 
       buffer.consume(buffer.size());
 
       beast::ostream(buffer) << msg;
 
+      // Echo the message back
       ws.write(buffer.data());
     }
   }
@@ -116,12 +112,10 @@ int main(int argc, char *argv[])
       // Block until we get a connection
       acceptor.accept(socket);
 
+      std::vector<std::future<void>> sessions;
+
       // Launch the session, transferring ownership of the socket
-      std::thread(
-          &do_session,
-          std::move(socket))
-          .detach();
-      
+      sessions.push_back(std::async(std::launch::async, do_session, std::move(socket)));
     }
   }
   catch (const std::exception &e)
