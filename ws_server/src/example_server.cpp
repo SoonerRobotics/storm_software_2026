@@ -24,8 +24,11 @@
 #include <thread>
 #include <vector>
 #include <future>
+<<<<<<< HEAD
 #include <vector>
 #include <future>
+=======
+>>>>>>> 7a8c70382425a4f13752e76e3a8b65c364e9f36c
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -76,20 +79,29 @@ boost::asio::awaitable<void> do_session(tcp::socket socket)
       // Read a message
       co_await ws.async_read(buffer, boost::asio::use_awaitable);
 
+<<<<<<< HEAD
       std::string data = boost::beast::buffers_to_string(buffer.data());
 
       std::cout << "heard: " + data << std::endl;
+=======
+      std::string msg = "echoing: " + beast::buffers_to_string(buffer.data());
+>>>>>>> 7a8c70382425a4f13752e76e3a8b65c364e9f36c
 
       buffer.consume(buffer.size());
 
       data = "echoing " + data;
 
+<<<<<<< HEAD
       beast::ostream(buffer) << data;
 
       // // Echo the message back
       co_await ws.async_write(buffer.data(), boost::asio::use_awaitable);
 
       std::cout << "reached here" << std::endl;
+=======
+      // Echo the message back
+      ws.write(buffer.data());
+>>>>>>> 7a8c70382425a4f13752e76e3a8b65c364e9f36c
     }
   }
   catch (beast::system_error const &se)
@@ -134,6 +146,7 @@ int main(int argc, char *argv[])
       // Block until we get a connection
       acceptor.accept(socket);
 
+<<<<<<< HEAD
 
       auto work_guard = boost::asio::make_work_guard(ioc);
 
@@ -147,6 +160,12 @@ int main(int argc, char *argv[])
       f.get();
 
       std::cout << "coroutine done" << std::endl;
+=======
+      std::vector<std::future<void>> sessions;
+
+      // Launch the session, transferring ownership of the socket
+      sessions.push_back(std::async(std::launch::async, do_session, std::move(socket)));
+>>>>>>> 7a8c70382425a4f13752e76e3a8b65c364e9f36c
     }
   }
   catch (const std::exception &e)
