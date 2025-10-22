@@ -14,15 +14,16 @@
 //------------------------------------------------------------------------------
 
 #include <boost/beast/core.hpp>
-#include <boost/beast/core/buffer_traits.hpp>
-
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio.hpp>
 #include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <string>
 #include <thread>
+#include <vector>
+#include <future>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -32,8 +33,21 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 //------------------------------------------------------------------------------
 
+struct Sustruct
+{
+  int id;
+  char text[128];
+
+  template <class Archive>
+  void serialize(Archive &ar, const unsigned int)
+  {
+    ar & id;
+    ar & text;
+  }
+};
+
 // Echoes back all received WebSocket messages
-void do_session(tcp::socket socket)
+boost::asio::awaitable<void> do_session(tcp::socket socket)
 {
   try
   {
@@ -50,7 +64,7 @@ void do_session(tcp::socket socket)
         }));
 
     // Accept the websocket handshake
-    ws.accept();
+    co_await ws.async_accept(boost::asio::use_awaitable);
 
     for (;;)
     {
@@ -58,20 +72,22 @@ void do_session(tcp::socket socket)
       beast::multi_buffer buffer;
 
       // Read a message
-      ws.read(buffer);
+      co_await ws.async_read(buffer, boost::asio::use_awaitable);
 
-      // Echo the message back
-      // ws.text(ws.got_text());
+      std::string data = boost::beast::buffers_to_string(buffer.data());
 
-      std::string incoming = boost::beast::buffers_to_string(buffer.data());
-
-      std::string msg = "echoing: " + incoming;
+      std::cout << "heard: " + data << std::endl;
 
       buffer.consume(buffer.size());
 
-      beast::ostream(buffer) << msg;
+      data = "echoing " + data;
 
-      ws.write(buffer.data());
+      beast::ostream(buffer) << data;
+
+      // // Echo the message back
+      co_await ws.async_write(buffer.data(), boost::asio::use_awaitable);
+
+      std::cout << "reached here" << std::endl;
     }
   }
   catch (beast::system_error const &se)
@@ -116,12 +132,19 @@ int main(int argc, char *argv[])
       // Block until we get a connection
       acceptor.accept(socket);
 
+
+      auto work_guard = boost::asio::make_work_guard(ioc);
+
       // Launch the session, transferring ownership of the socket
-      std::thread(
-          &do_session,
-          std::move(socket))
-          .detach();
-      
+      std::future<void> f = boost::asio::co_spawn(ioc, do_session(std::move(socket)), boost::asio::use_future);
+
+      ioc.run();
+
+      std::cout << "coroutine running in the background" << std::endl;
+
+      f.get();
+
+      std::cout << "coroutine done" << std::endl;
     }
   }
   catch (const std::exception &e)
