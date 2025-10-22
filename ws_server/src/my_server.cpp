@@ -4,6 +4,29 @@
 #include <iostream>
 #include <future>
 #include <chrono>
+#include <boost/json.hpp>
+
+struct exampleMessageType {
+  std::string msg;
+  int id;
+};
+
+void tag_invoke(boost::json::value_from_tag, boost::json::value& jv, const exampleMessageType& s) {
+  jv = {
+    {"msg", s.msg},
+    {"id", s.id}
+  };
+}
+
+exampleMessageType tag_invoke(boost::json::value_to_tag<exampleMessageType>, const boost::json::value& jv) {
+  const auto obj = jv.as_object();
+  return exampleMessageType{
+    boost::json::value_to<std::string>(obj.at("msg")),
+    boost::json::value_to<int>(obj.at("id"))
+  };
+}
+
+
 
 boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket socket)
 {
@@ -21,11 +44,22 @@ boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket socket)
 
       std::string data = boost::beast::buffers_to_string(buffer.data());
 
+      boost::json::value jv = boost::json::parse(data);
+
+      exampleMessageType received = boost::json::value_to<exampleMessageType>(jv);
+
       buffer.consume(buffer.size()); // clear buffer
 
       std::cout << "heard: " + data << std::endl;
 
-      data = "echoing " + data;
+      exampleMessageType returnMsg {
+        "echoing " + received.msg,
+        received.id
+      };
+
+      jv = boost::json::value_from(returnMsg);
+
+      data = boost::json::serialize(jv);
 
       boost::beast::ostream(buffer) << data;
 
@@ -43,8 +77,6 @@ boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket socket)
   {
     std::cerr << "Error: " << e.what() << std::endl;
   }
-
-  std::cout << "reached the end of read write" << std::endl;
 }
 
 boost::asio::awaitable<void> other_work()

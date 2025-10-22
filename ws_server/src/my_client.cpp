@@ -1,14 +1,43 @@
 #include <string>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/json.hpp>
 #include <iostream>
+
+struct exampleMessageType {
+  std::string msg;
+  int id;
+};
+
+void tag_invoke(boost::json::value_from_tag, boost::json::value& jv, const exampleMessageType& s) {
+  jv = {
+    {"msg", s.msg},
+    {"id", s.id}
+  };
+}
+
+exampleMessageType tag_invoke(boost::json::value_to_tag<exampleMessageType>, const boost::json::value& jv) {
+  const auto obj = jv.as_object();
+  return exampleMessageType{
+    boost::json::value_to<std::string>(obj.at("msg")),
+    boost::json::value_to<int>(obj.at("id"))
+  };
+}
+
 
 int main () {
   std::string host;
 
-  char * port = "8080";
+  std::string port = "8080";
 
-  std::string text = "hello world";
+  exampleMessageType msg {
+    "hello world",
+    1234
+  };
+
+  boost::json::value jv = boost::json::value_from(msg);
+
+  std::string data = boost::json::serialize(jv);
 
   boost::asio::io_context ioc;
 
@@ -26,13 +55,13 @@ int main () {
 
   boost::beast::multi_buffer buffer;
 
-  boost::beast::ostream(buffer) << text;
+  boost::beast::ostream(buffer) << data;
+
+  std::cout << "before " << boost::beast::make_printable(buffer.data()) << std::endl;
 
   ws.write(buffer.data());
 
   buffer.consume(buffer.size());
-
-  std::cout << "before " << boost::beast::make_printable(buffer.data()) << std::endl;
 
   ws.read(buffer);
 
