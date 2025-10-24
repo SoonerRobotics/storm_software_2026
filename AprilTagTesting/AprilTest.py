@@ -1,6 +1,8 @@
 import cv2
 import pyapriltags
 from pyapriltags import Detection, Detector
+import scipy.spatial.transform
+from scipy.spatial.transform import Rotation as R
 
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
@@ -8,18 +10,18 @@ if not cap.isOpened():
     exit()
     
 at_detector = Detector(families='tag36h11',
-                       nthreads=1,
-                       quad_decimate=1.0,
-                       quad_sigma=0.0,
-                       refine_edges=1,
-                       decode_sharpening=0.25,
-                       debug=0)
+                        nthreads=1,
+                        quad_decimate=1.0,
+                        quad_sigma=0.0,
+                        refine_edges=1,
+                        decode_sharpening=0.25,
+                        debug=0)
 
 
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
- 
+
     # if frame is read correctly ret is True
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
@@ -31,7 +33,7 @@ while True:
     # Display the resulting frame
     if cv2.waitKey(1) == ord('q'):
         break
- 
+
     for result in results:
         #print(result.tag_id)
         
@@ -56,10 +58,16 @@ while True:
         color = (255, 0, 255)
         thickness = 2
         frame = cv2.putText(frame, str(result.tag_id), corner_a, font, fontScale, color, thickness, cv2.LINE_AA)
+        #Translation vector output:
         #[horizontal translation (maybe?)
         #vertical translation
         #depth translation]
-        print(result.pose_t)
+        #print(result.pose_t)
+
+
+        #result.pose_R is a rotation matrix (needs to be turned into real numbers)
+        rotation = R.from_matrix(result.pose_R)
+        print(rotation.as_euler("zxy", True))
 
     cv2.imshow('frame', frame)
 # When everything done, release the capture
