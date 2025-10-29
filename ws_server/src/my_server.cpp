@@ -6,27 +6,26 @@
 #include <chrono>
 #include <boost/json.hpp>
 
-struct exampleMessageType {
-  std::string msg;
-  int id;
+struct addressedData
+{
+  std::string client_id;
+  std::string jsonMsgData;
 };
 
-void tag_invoke(boost::json::value_from_tag, boost::json::value& jv, const exampleMessageType& s) {
+void tag_invoke(boost::json::value_from_tag, boost::json::value& jv, const addressedData& s) {
   jv = {
-    {"msg", s.msg},
-    {"id", s.id}
+    {"client_id", s.client_id},
+    {"jsonMsgData", s.jsonMsgData}
   };
 }
 
-exampleMessageType tag_invoke(boost::json::value_to_tag<exampleMessageType>, const boost::json::value& jv) {
+addressedData tag_invoke(boost::json::value_to_tag<addressedData>, const boost::json::value& jv) {
   const auto obj = jv.as_object();
-  return exampleMessageType{
-    boost::json::value_to<std::string>(obj.at("msg")),
-    boost::json::value_to<int>(obj.at("id"))
+  return addressedData{
+    boost::json::value_to<std::string>(obj.at("client_id")),
+    boost::json::value_to<std::string>(obj.at("jsonMsgData"))
   };
 }
-
-
 
 boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket socket)
 {
@@ -46,15 +45,15 @@ boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket socket)
 
       boost::json::value jv = boost::json::parse(data);
 
-      exampleMessageType received = boost::json::value_to<exampleMessageType>(jv);
+      addressedData received = boost::json::value_to<addressedData>(jv);
 
       buffer.consume(buffer.size()); // clear buffer
 
       std::cout << "heard: " + data << std::endl;
 
-      exampleMessageType returnMsg {
-        "echoing " + received.msg,
-        received.id
+      addressedData returnMsg {
+        "echoing " + received.client_id,
+        received.jsonMsgData
       };
 
       jv = boost::json::value_from(returnMsg);

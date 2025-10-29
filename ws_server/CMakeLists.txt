@@ -34,3 +34,5 @@ function(add_boost_executable name source)
 endfunction()
 
 add_boost_executable(my_server src/my_server.cpp)
+
+add_boost_executable(relay_server src/relay_server.cpp)

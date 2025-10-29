@@ -4,40 +4,34 @@
 #include <boost/json.hpp>
 #include <iostream>
 
-struct exampleMessageType {
-  std::string msg;
-  int id;
+#define CLIENT_IP "127.0.0.1"
+
+struct addressedData
+{
+  std::string client_id;
+  std::string jsonMsgData;
 };
 
-void tag_invoke(boost::json::value_from_tag, boost::json::value& jv, const exampleMessageType& s) {
+void tag_invoke(boost::json::value_from_tag, boost::json::value &jv, const addressedData &s)
+{
   jv = {
-    {"msg", s.msg},
-    {"id", s.id}
-  };
+      {"client_id", s.client_id},
+      {"jsonMsgData", s.jsonMsgData}};
 }
 
-exampleMessageType tag_invoke(boost::json::value_to_tag<exampleMessageType>, const boost::json::value& jv) {
+addressedData tag_invoke(boost::json::value_to_tag<addressedData>, const boost::json::value &jv)
+{
   const auto obj = jv.as_object();
-  return exampleMessageType{
-    boost::json::value_to<std::string>(obj.at("msg")),
-    boost::json::value_to<int>(obj.at("id"))
-  };
+  return addressedData{
+      boost::json::value_to<std::string>(obj.at("client_id")),
+      boost::json::value_to<std::string>(obj.at("jsonMsgData"))};
 }
 
-
-int main () {
-  std::string host;
+int main (int argc, char* argv[]) {
+  std::string host = "0.0.0.0";
 
   std::string port = "8080";
 
-  exampleMessageType msg {
-    "hello world",
-    1234
-  };
-
-  boost::json::value jv = boost::json::value_from(msg);
-
-  std::string data = boost::json::serialize(jv);
 
   boost::asio::io_context ioc;
 
@@ -47,13 +41,21 @@ int main () {
 
   boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp> results = resolver.resolve(host, port);
 
-  boost::asio::ip::basic_endpoint<boost::asio::ip::tcp> ep = boost::asio::connect(ws.next_layer(), results);
+  boost::asio::connect(ws.next_layer(), results);
 
-  host += ":" + std::to_string(ep.port());
+  host += ":" + std::to_string(ws.next_layer().remote_endpoint().port());
 
   ws.handshake(host, "/");
 
   boost::beast::multi_buffer buffer;
+
+  auto address_port = ws.next_layer().local_endpoint().address().to_string() + ":" + std::to_string(ws.next_layer().local_endpoint().port());
+
+  addressedData msg = {address_port, "Hello, World!"};
+
+  boost::json::value jv = boost::json::value_from(msg);
+
+  std::string data = boost::json::serialize(jv);
 
   boost::beast::ostream(buffer) << data;
 
@@ -65,7 +67,9 @@ int main () {
 
   ws.read(buffer);
 
-  ws.close(boost::beast::websocket::close_code::normal);
-
   std::cout << boost::beast::make_printable(buffer.data()) << std::endl;
+
+  for (;;) {
+
+  }
 }
