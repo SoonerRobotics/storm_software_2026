@@ -1,0 +1,1 @@
+# run all base station programs and attempt to connect to the robot
