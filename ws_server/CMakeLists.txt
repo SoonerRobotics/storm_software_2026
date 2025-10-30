@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost REQUIRED COMPONENTS system json)
 
+find_package(libhv REQUIRED)
+
 add_executable(hw src/hello_world.cpp)
 
 add_executable(server src/example_server.cpp)
@@ -33,6 +35,16 @@ function(add_boost_executable name source)
   target_include_directories(${name} PUBLIC ${Boost_INCLUDE_DIRS})
 endfunction()
 
+function(add_libhv_executable name source)
+  add_executable(${name} ${source})
+  target_link_libraries(${name} PUBLIC hv)
+  target_include_directories(${name} PUBLIC ${hv_INCLUDE_DIRS})
+endfunction()
+
 add_boost_executable(my_server src/my_server.cpp)
 
 add_boost_executable(relay_server src/relay_server.cpp)
+
+add_libhv_executable(hv_server src/hv_server.cpp)
+
+add_libhv_executable(hv_client src/hv_client.cpp)
