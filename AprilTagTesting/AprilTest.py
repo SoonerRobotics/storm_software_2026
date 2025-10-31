@@ -1,8 +1,7 @@
 import cv2
-import pyapriltags
 from pyapriltags import Detection, Detector
-import scipy.spatial.transform
 from scipy.spatial.transform import Rotation as R
+import time
 
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
@@ -17,26 +16,29 @@ at_detector = Detector(families='tag36h11',
                         decode_sharpening=0.25,
                         debug=0)
 
-
+i = 0
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
-
+    
     # if frame is read correctly ret is True
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
         break
+
     # Our operations on the frame come here
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
     #Parameters: image to detect from, whether or not to estimate the position, camera calibration, AprilTag size
-    results = at_detector.detect(gray, True, [1522.31, 1522.31, 1074.23, 673.363], 0.1)
+    results = at_detector.detect(gray, True, [1398.92, 1398.92, 967.614, 570.073], 0.1)
+
     # Display the resulting frame
     if cv2.waitKey(1) == ord('q'):
         break
 
     for result in results:
         #print(result.tag_id)
-        
+        i += 1
         (corner_a, corner_b, corner_c, corner_d) = result.corners
 
         corner_a = (int(corner_a[0]), int(corner_a[1]))
@@ -66,10 +68,13 @@ while True:
 
 
         #result.pose_R is a rotation matrix (needs to be turned into real numbers)
-        rotation = R.from_matrix(result.pose_R)
-        print(rotation.as_euler("zxy", True))
+        if(i == 10):
+            rotation = R.from_matrix(result.pose_R)
+            print(rotation.as_euler("zxy", True))
+            i = 0
 
     cv2.imshow('frame', frame)
+
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
