@@ -30,7 +30,7 @@ while True:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     #Parameters: image to detect from, whether or not to estimate the position, camera calibration, AprilTag size
-    results = at_detector.detect(gray, True, [1398.92, 1398.92, 967.614, 570.073], 0.1)
+    results = at_detector.detect(gray, True, [1350.60, 1345.64, 1169.34, 569.257], 0.05)
 
     # Display the resulting frame
     if cv2.waitKey(1) == ord('q'):
@@ -68,9 +68,14 @@ while True:
 
 
         #result.pose_R is a rotation matrix (needs to be turned into real numbers)
-        if(i == 10):
+        if(i == 20):
             rotation = R.from_matrix(result.pose_R)
-            print(rotation.as_euler("zxy", True))
+            data = rotation.as_euler("zxy", True)
+            print(result.tag_id)
+            print(data)
+            if(data[2] < 0):
+                data[2] = data[2]/2
+            print(data)
             i = 0
 
     cv2.imshow('frame', frame)
