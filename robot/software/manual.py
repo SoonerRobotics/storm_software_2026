@@ -12,8 +12,13 @@ pygame.joystick.init() # I think this is redundant? maybe we don't need
 controller = None
 #pico = serial.Serial(port="/dev/ttyACM0", baudrate=115200)
 
-def to_uint8(x):
-	return floor(x * 255)
+#TODO make a util.py or somethin
+def clamp(val, min_, max_):
+	if val < min_:
+		return min_
+	elif val > max_:
+		return max_
+	return val
 
 # main big loop
 while True:
@@ -29,15 +34,30 @@ while True:
 			if event.type == pygame.QUIT:
 				raise SystemExit # high-tail it outta here
 			elif event.type == pygame.JOYAXISMOTION:
-				drive = controller.get_axis(0)
-				strafe = controller.get_axis(1)
+				drive = controller.get_axis(1)
+				strafe = controller.get_axis(2)
 				turn = controller.get_axis(4)
 				
 				#TODO FIXME add strafing once we like, have more than 2 motors y'know
-				left_motor = drive + turn
+				left_motor = drive + turn #also TODO FIXME NORMALIZE THESE!!!
 				right_motor = drive - turn
 				
-				data = struct.pack("<II", left_motor, right_motor)
+				left_motor_abs = floor(abs(left_motor) * 255)
+				left_motor_dir = 1 if left_motor < 0 else 0
+				
+				right_motor_abs = floor(abs(right_motor) * 255)
+				right_motor_dir = 2 if right_motor < 0 else 0
+				
+				# bit-stuffing so this is in one byte instead of two 1-byte booleans
+				direction = left_motor_dir | right_motor_dir
+				
+				#TODO FIXME this will be fine once things get normalized but for now
+				left_motor_abs = clamp(left_motor_abs, 0, 255)
+				right_motor_abs = clamp(right_motor_abs, 0, 255)
+				
+				print(left_motor_abs, right_motor_abs, direction)
+				
+				data = struct.pack("<BBB", left_motor_abs, right_motor_abs, direction)
 				
 				#pico.write(data)
 				print(data) #TODO FIXME
