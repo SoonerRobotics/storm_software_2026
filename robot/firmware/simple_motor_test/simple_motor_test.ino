@@ -5,19 +5,16 @@
 // SPARK mini min and max pulse width, in microseconds
 #define MIN_MICROS 500
 #define MAX_MICROS 2500
+#define RANGE_MICROS MAX_MICROS - MIN_MICROS
 
-// #include <stdio.h> 
+// #include <stdio.h>
 #include <Servo.h>
 
 Servo leftMotor;
 Servo rightMotor;
 
-int motorSpeed = 90; // if less than 200, treated as an angle for a Servo by the <Servo.h> library, so 90 degrees should be neutral / no speed.
-int direction = 1; // positive is forwards, -1 is reverse
-int safety = 30; // I don't trust anything or anyone anymore.
-
 void setup() {
-  // Serial.begin(115200);
+  Serial.begin(115200);
 
   pinMode(LED_PIN, OUTPUT);
   pinMode(LEFT_MOTOR_PIN, OUTPUT);
@@ -30,23 +27,40 @@ void setup() {
 }
 
 void loop() {
-  // sweep from stopped to full forwards to full reverse and back
-  if (motorSpeed <= (0 + safety)) {
-    direction = 1;
-  } else if (motorSpeed >= (180 - safety)) {
-    direction = -1;
-  }
+  // read in the motor commands (left, right, and direction)
+  unsigned int left_abs = Serial.read();
+  unsigned int right_abs = Serial.read();
+  int direction = Serial.read();
 
-  motorSpeed += direction;
+  int leftDirection = 1;
+  int rightDirection = -1; // right motor is reversed because they're on opposite sides of each other
 
-  motorSpeed = 1800;
+  // if (left_abs == -1) {
+  //   // no serial data available, kill motors
+  //   leftMotor.writeMicroseconds(1500);
+  //   rightMotor.writeMicroseconds(1500);
+  //   digitalWrite(LED_PIN, LOW);
+    // delay(500);
+  // } else {
+    digitalWrite(LED_PIN, HIGH);
 
-  leftMotor.writeMicroseconds(motorSpeed);
-  rightMotor.writeMicroseconds(motorSpeed); // they're on opposite sides, so reverse the direction
+    if (direction & 2 > 0) {
+      // right motor goes backwards
+      rightDirection *= -1;
+    }
 
-  // blink LED because we can
-  // digitalWrite(LED_PIN, HIGH);
-  // delay(200);
-  // digitalWrite(LED_PIN, LOW);
-  // delay(200);
+    if (direction & 1 > 0) {
+      // left motor goes backwards
+      leftDirection *= -1;
+    }
+
+    // set motors
+    leftMotor.writeMicroseconds(500 + (leftDirection * left_abs * 1));
+    rightMotor.writeMicroseconds(500 + (rightDirection * right_abs * 1));
+
+    // if we haven't received a command recently, stop us
+    // TODO FIXME ????
+  // }
+  
+  // delay(50);
 }
