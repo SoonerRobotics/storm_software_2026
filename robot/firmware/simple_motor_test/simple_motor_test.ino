@@ -35,13 +35,11 @@ void loop() {
   int leftDirection = 1;
   int rightDirection = -1; // right motor is reversed because they're on opposite sides of each other
 
-  // if (left_abs == -1) {
-  //   // no serial data available, kill motors
-  //   leftMotor.writeMicroseconds(1500);
-  //   rightMotor.writeMicroseconds(1500);
-  //   digitalWrite(LED_PIN, LOW);
-    // delay(500);
-  // } else {
+  if (left_abs == -1) {
+    // no serial data available, kill motors ??? TODO FIXME
+
+    // DO NOTHING (as of now at least) so as to not interrupt an existing motor command.    
+  } else {
     digitalWrite(LED_PIN, HIGH);
 
     if (direction & 2 > 0) {
@@ -60,7 +58,7 @@ void loop() {
 
     // if we haven't received a command recently, stop us
     // TODO FIXME ????
-  // }
+  }
   
   // delay(50);
 }
