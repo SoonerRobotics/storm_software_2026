@@ -1,5 +1,6 @@
 #include "hv/WebSocketClient.h"
 #include "hv/json.hpp"
+#include <src/message_header.h>
 using namespace hv;
 
 
@@ -9,6 +10,31 @@ using namespace hv;
 // TODO define Serial structs
 
 // TODO define Software Messages 110 and 160
+// Robot State Message (message 160), sent from Task PCB to Software Controller
+struct RobotStateMessage {
+    Header header;
+
+    // == drive ==
+    // TODO FIXME do these have like, dividers?
+    //TODO FIXME do we want a Units library too???
+    signed short x_velocity;
+    signed short y_velocity;
+    signed short rotational_velocity;
+
+    // == task ==
+    signed short intake_velocity; // RPM???
+    signed short intake_override;
+    
+    bool scorer_claw_state;
+    unsigned short scorer_slide_position; //???
+    unsigned int scorer_wrist_position; //???
+
+    signed short charging_frequency;
+    
+    float grid_voltage;
+
+    unsigned short climber_height; ///???
+};
 
 struct addressedData {
     std::string sender;
