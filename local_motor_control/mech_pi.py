@@ -202,69 +202,30 @@ threading.Thread(target=local_controller_thread, daemon=True).start()
 
 # --- WebSocket handler (remote control) ---
 async def message_process(websocket):
-    global control_mode
     print("WebSocket client connected.")
-    prev_out = (0,0,0,0)
 
     try:
         async for message in websocket:
-            data = json.loads(message)
+            data = None
+            try:
+                data = json.loads(message)
+            except Exception:
+                # If it's not JSON, maybe HTML sends raw string already
+                pass
 
-            if not data.get("connection_status", False):
-                continue
-
-            # Map remote fields same as local mapping:
-            forward = -data.get("left_stick_y", 0.0)   # invert so up=+1
-            rotate  = data.get("right_stick_x", 0.0)
-
-            # Read triggers from JSON if present (HTML sends triggers in buttons or fields)
-            # Try common fields:
-            lt = data.get("trigger_left", None)
-            rt = data.get("trigger_right", None)
-
-            # HTML joystick earlier sent triggers as 0..65535, so if present scale to 0..1
-            if lt is not None:
-                try:
-                    lt = float(lt) / 65535.0
-                except Exception:
-                    lt = 0.0
+            if data:
+                # If it's structured JSON, rebuild message for Pico
+                fl = data.get("FL", 0)
+                fr = data.get("FR", 0)
+                rl = data.get("RL", 0)
+                rr = data.get("RR", 0)
+                cmd = f"FL{fl}FR{fr}RL{rl}RR{rr}\n"
             else:
-                lt = 0.0
+                # Otherwise, assume it's already in FL..FR.. format from HTML
+                cmd = message.strip() + "\n"
 
-            if rt is not None:
-                try:
-                    rt = float(rt) / 65535.0
-                except Exception:
-                    rt = 0.0
-            else:
-                rt = 0.0
-
-            # If triggers not present, fallback to left-right on dpad or zero
-            strafe = rt - lt
-
-            # Deadzone
-            def dz(v, th=0.05):
-                return 0.0 if abs(v) < th else v
-            forward = dz(forward); rotate = dz(rotate); strafe = dz(strafe)
-
-            # Mecanum mixing
-            fl = forward + strafe + rotate
-            fr = forward - strafe - rotate
-            rl = forward - strafe + rotate
-            rr = forward + strafe - rotate
-
-            max_mag = max(abs(fl), abs(fr), abs(rl), abs(rr), 1.0)
-            fl /= max_mag; fr /= max_mag; rl /= max_mag; rr /= max_mag
-
-            out = (int(round(fl * MAX_SPEED)),
-                   int(round(fr * MAX_SPEED)),
-                   int(round(rl * MAX_SPEED)),
-                   int(round(rr * MAX_SPEED)))
-
-            if control_mode == 'remote' and out != prev_out:
-                cmd = f"M{out[0]},{out[1]},{out[2]},{out[3]}\n"
-                serial_queue.put(cmd)
-                prev_out = out
+            # Send directly to Pico
+            serial_queue.put(cmd)
 
     except websockets.exceptions.ConnectionClosed:
         print("WebSocket client disconnected.")
