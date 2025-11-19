@@ -2,6 +2,8 @@
 #include "hv/json.hpp"
 using namespace hv;
 
+#define SERVER_PORT 1909
+
 struct addressedData
 {
   std::string sender;
@@ -9,7 +11,14 @@ struct addressedData
   std::string data;
 };
 
+struct exampleDataType {
+  int ID;
+  std::string message;
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(addressedData, sender, destination, data);
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(exampleDataType, ID, message);
 
 int main(int argc, char **argv)
 {
@@ -20,8 +29,19 @@ int main(int argc, char **argv)
     addressedData ad;
     ad.sender = "client2";
     ad.destination = "client1";
-    ad.data = "Hello, client1!";
 
+    // make struct
+    exampleDataType edt_instance;
+    edt_instance.ID = 99;
+    edt_instance.message = "Hello Client1!";
+
+    // serialize the data
+    Json edt_j = edt_instance;
+
+    // pack into addressed data
+    ad.data = edt_j.dump();
+
+    // send to destination
     Json j = ad;
     ws.send(j.dump());
   };
@@ -43,7 +63,9 @@ int main(int argc, char **argv)
   reconn.delay_policy = 2;
   ws.setReconnect(&reconn);
 
-  ws.open("ws://127.0.0.1:1909");
+  std::string server_address = std::format("ws://127.0.0.1:{}", SERVER_PORT);
+
+  ws.open(server_address.c_str());
 
   std::string str;
   while (std::getline(std::cin, str))
