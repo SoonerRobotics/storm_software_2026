@@ -9,8 +9,6 @@ find_package(Boost REQUIRED COMPONENTS system json)
 
 find_package(libhv REQUIRED)
 
-add_executable(hw src/hello_world.cpp)
-
 function(add_libhv_executable name source)
   add_executable(${name} ${source})
   target_link_libraries(${name} PUBLIC hv)
