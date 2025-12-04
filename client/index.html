@@ -13,12 +13,6 @@
 
 <body>
   <p id="example"></p>
-  <video id='localCam' width="320" height="240" controls autoplay>
-    Your browser does not support the video tag.
-  </video>
-
-  <video id='remoteCam' width="320" height="240" controls autoplay>
-  </video>
 
   <!--Layout-->
   <div class="layout">
@@ -28,7 +22,8 @@
 
       <!--Camera-->
       <div class="cameradiv">
-        <h1>Camera</h1>
+        <video id='remoteCam' width="640" height="480" controls autoplay>
+        </video>
       </div>
 
       <!--Robot Commands-->
@@ -69,6 +64,11 @@
       </div>
     </div>
   </div>
+
+  <!-- Required for reusing the same html on the robot and base station -->
+  <video id='localCam' width="1" height="1" controls autoplay>
+    Your browser does not support the video tag.
+  </video>
 </body>
 
 </html>
