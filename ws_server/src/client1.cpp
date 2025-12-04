@@ -74,18 +74,5 @@ int main(int argc, char **argv)
 
   ws.open(server_address.c_str());
 
-  std::string str;
-  while (std::getline(std::cin, str))
-  {
-    if (!ws.isConnected())
-      break;
-    if (str == "quit")
-    {
-      ws.close();
-      break;
-    }
-    ws.send(str);
-  }
-
   return 0;
 }
