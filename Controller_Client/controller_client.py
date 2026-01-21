@@ -5,9 +5,11 @@ import threading
 import signal
 import pygame 
 
-SERVER_URL = "ws://192.168.1.111:1909"
+SERVER_URL = "ws://192.168.1.123:1909"
 SENDER_NAME = "1"
 DESTINATIONS = ["3"]
+
+DEADZONE = 0.05  # deadzone for analog sticks/triggers
 
 # ----------------------------
 # Functions to send messages
@@ -21,18 +23,29 @@ def send_addressed(ws, dest, payload):
     try:
         ws.send(json.dumps(msg))
     except Exception as e:
-        pass
+        # Log once per failure site instead of silent pass
+        print(f"[Controller] Error sending to {dest}: {e}")
+
+# ----------------------------
+# Utility: apply deadzone
+# ----------------------------
+def apply_deadzone(value, dz=DEADZONE):
+    if abs(value) < dz:
+        return 0.0
+    return value
 
 # ----------------------------
 # Controller Client Class
 # ----------------------------
 class ControllerClient:
 
-    # >> WebSocket callbacks (Moved above __init__ to fix AttributeError) <<
+    # ----------------------------
+    # WebSocket callbacks
+    # ----------------------------
     def on_open(self, ws):
         print("[Controller] Connected to server")
         self.connected = True
-        time.sleep(0.5) # Keep the delay for server timing
+        time.sleep(0.5)  # Keep delay for server timing
         msg11 = {"id": 11, "connection_status": True}
         for dest in DESTINATIONS:
             send_addressed(ws, dest, msg11)
@@ -46,6 +59,9 @@ class ControllerClient:
         print("[Controller] WebSocket error:", error)
         self.stop_event.set()
 
+    # ----------------------------
+    # Initialize
+    # ----------------------------
     def __init__(self, server_url):
         self.ws = websocket.WebSocketApp(
             server_url,
@@ -57,8 +73,12 @@ class ControllerClient:
         self.lock = threading.Lock()
         self.stop_event = threading.Event()
         self.controller_state = self.default_state()
-        self.joystick = None 
+        self.joystick = None
+        self.mapping = {}
 
+    # ----------------------------
+    # Default controller state
+    # ----------------------------
     def default_state(self):
         return {
             "id": 10,
@@ -86,57 +106,147 @@ class ControllerClient:
         }
 
     # ----------------------------
-    # Controller input using Pygame
+    # Controller input loop (auto-mapping)
     # ----------------------------
     def read_gamepad_loop(self):
         pygame.init()
+        pygame.joystick.quit()
         pygame.joystick.init()
 
-        if pygame.joystick.get_count() > 0:
-            self.joystick = pygame.joystick.Joystick(0)
-            self.joystick.init()
-            print(f"[Controller] Detected Joystick: {self.joystick.get_name()}")
+        if pygame.joystick.get_count() == 0:
+            print("[Controller] No joystick found.")
+            self.stop_event.set()
+            return
+
+        self.joystick = pygame.joystick.Joystick(0)
+        self.joystick.init()
+        name = self.joystick.get_name()
+        print(f"[Controller] Detected joystick: {name}")
+
+        # Automatic mapping for Xbox, PlayStation, generic
+        if "xbox" in name.lower():
+            mapping = {
+                "button_a": 0,
+                "button_b": 1,
+                "button_x": 3,
+                "button_y": 4,
+                "button_left_bumper": 6,
+                "button_right_bumper": 7,
+                "button_left": 10,
+                "button_right": 11,
+                "button_center": 12,
+                "left_stick_button": 13,
+                "right_stick_button": 14,
+                "dpad": 0,
+                "axes": {
+                    "left_stick_x": 0,
+                    "left_stick_y": 1,
+                    "right_stick_x": 2,
+                    "right_stick_y": 3,
+                    "trigger_left": 5,
+                    "trigger_right": 4
+                }
+            }
+        elif "playstation" in name.lower() or "dualshock" in name.lower() or "dual sense" in name.lower():
+            mapping = {
+                "button_a": 0,  # Cross
+                "button_b": 1,  # Circle
+                "button_x": 2,  # Square
+                "button_y": 3,  # Triangle
+                "button_left_bumper": 4,
+                "button_right_bumper": 5,
+                "button_left": 8,   # Share
+                "button_right": 9,  # Options
+                "button_center": 12, # PS button
+                "left_stick_button": 10,
+                "right_stick_button": 11,
+                "dpad": 0,
+                "axes": {
+                    "left_stick_x": 0,
+                    "left_stick_y": 1,
+                    "right_stick_x": 2,
+                    "right_stick_y": 3,
+                    "trigger_left": 4,
+                    "trigger_right": 5
+                }
+            }
         else:
-            print("[Controller] No joystick found with Pygame.")
-            self.stop_event.set() # Stop the script if no controller
+            print("[Controller] Unknown controller, using default mapping")
+            mapping = {
+                "button_a": 0,
+                "button_b": 1,
+                "button_x": 3,
+                "button_y": 2,
+                "button_left_bumper": 4,
+                "button_right_bumper": 5,
+                "button_left": 8,
+                "button_right": 9,
+                "button_center": 10,
+                "left_stick_button": 11,
+                "right_stick_button": 12,
+                "dpad": 0,
+                "axes": {
+                    "left_stick_x": 0,
+                    "left_stick_y": 1,
+                    "right_stick_x": 3,
+                    "right_stick_y": 4,
+                    "trigger_left": 2,
+                    "trigger_right": 5
+                }
+            }
+
+        self.mapping = mapping
 
         while not self.stop_event.is_set():
-            pygame.event.pump() 
+            pygame.event.pump()
+            axes = mapping["axes"]
 
-            if self.joystick:
-                with self.lock:
-                    s = self.controller_state
-                    # Get Axis values (Sticks/Triggers)
-                    try: 
-                        s["left_stick_x"] = self.joystick.get_axis(0)
-                        s["left_stick_y"] = -self.joystick.get_axis(1) 
-                        s["right_stick_x"] = self.joystick.get_axis(2)
-                        s["right_stick_y"] = -self.joystick.get_axis(3) 
-                        s["trigger_left"] = (self.joystick.get_axis(4) + 1) / 2 
-                        s["trigger_right"] = (self.joystick.get_axis(5) + 1) / 2
-                    except IndexError: pass 
+            with self.lock:
+                s = self.controller_state
 
-                    # Get Button values (mapping varies by OS/Controller)
-                    s["button_a"] = bool(self.joystick.get_button(0))
-                    s["button_b"] = bool(self.joystick.get_button(1))
-                    s["button_x"] = bool(self.joystick.get_button(3))
-                    s["button_y"] = bool(self.joystick.get_button(2))
-                    s["button_left_bumper"] = bool(self.joystick.get_button(4))
-                    s["button_right_bumper"] = bool(self.joystick.get_button(5))
-                    s["button_center"] = bool(self.joystick.get_button(11)) # Common mapping for center/mode
-                    s["button_left"] = bool(self.joystick.get_button(8))   # Common mapping for select
-                    s["button_right"] = bool(self.joystick.get_button(9))  # Common mapping for start
-                    s["left_stick_button"] = bool(self.joystick.get_button(12))
-                    s["right_stick_button"] = bool(self.joystick.get_button(10))
+                # Axes
+                try:
+                    lx = self.joystick.get_axis(axes["left_stick_x"])
+                    ly = -self.joystick.get_axis(axes["left_stick_y"])
+                    rx = self.joystick.get_axis(axes["right_stick_x"])
+                    ry = -self.joystick.get_axis(axes["right_stick_y"])
+                    tl = (self.joystick.get_axis(axes["trigger_left"]) + 1) / 2
+                    tr = (self.joystick.get_axis(axes["trigger_right"]) + 1) / 2
 
-                    # Get DPad values (Hat/POV)
-                    hat = self.joystick.get_hat(0)
+                    # Apply deadzone
+                    s["left_stick_x"] = apply_deadzone(lx)
+                    s["left_stick_y"] = apply_deadzone(ly)
+                    s["right_stick_x"] = apply_deadzone(rx)
+                    s["right_stick_y"] = apply_deadzone(ry)
+                    s["trigger_left"] = apply_deadzone(tl)
+                    s["trigger_right"] = apply_deadzone(tr)
+
+                except Exception as e:
+                    print(f"[Controller] Axis read error: {e}")
+
+                # Buttons
+                for btn_name in [
+                    "button_a","button_b","button_x","button_y",
+                    "button_left_bumper","button_right_bumper",
+                    "button_left","button_right","button_center",
+                    "left_stick_button","right_stick_button"
+                ]:
+                    try:
+                        s[btn_name] = bool(self.joystick.get_button(mapping[btn_name]))
+                    except Exception:
+                        s[btn_name] = False
+
+                # DPad (hat)
+                try:
+                    hat = self.joystick.get_hat(mapping["dpad"])
                     s["dpad_left"] = (hat[0] == -1)
                     s["dpad_right"] = (hat[0] == 1)
                     s["dpad_top"] = (hat[1] == 1)
                     s["dpad_bottom"] = (hat[1] == -1)
+                except Exception:
+                    s["dpad_left"] = s["dpad_right"] = s["dpad_top"] = s["dpad_bottom"] = False
 
-            time.sleep(0.01) # 100 Hz update rate for polling
+            time.sleep(0.01)
 
     # ----------------------------
     # Send loop
@@ -146,25 +256,26 @@ class ControllerClient:
             if self.connected:
                 with self.lock:
                     msg10 = self.controller_state.copy()
-                    for dest in DESTINATIONS:
-                        send_addressed(self.ws, dest, msg10)
+                for dest in DESTINATIONS:
+                    send_addressed(self.ws, dest, msg10)
             time.sleep(0.02) # 50 Hz
 
     # ----------------------------
-    # Run client and shutdown handler
+    # Shutdown handler
     # ----------------------------
     def shutdown_handler(self, sig, frame):
         print("\n[Controller] Shutting down...")
         self.stop_event.set()
         self.ws.close()
 
+    # ----------------------------
+    # Run client
+    # ----------------------------
     def run(self):
-        # Start threads as DAEMONS
         t1 = threading.Thread(target=self.read_gamepad_loop, daemon=True)
         t2 = threading.Thread(target=self.send_loop, daemon=True)
         t1.start()
         t2.start()
-
         self.ws.run_forever(ping_interval=10, ping_timeout=5)
         print("[Controller] Exited cleanly")
 
@@ -178,3 +289,4 @@ if __name__ == "__main__":
         client.run()
     except KeyboardInterrupt:
         print("[Controller] Keyboard interrupt caught in main.")
+
