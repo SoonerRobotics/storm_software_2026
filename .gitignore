@@ -1,4 +1,10 @@
+
 **/build
 **/.vscode
 
 *.log
+
+**/node_modules
+**/dist
+**/videos
+
