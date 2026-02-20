@@ -45,7 +45,7 @@ while True:
 
     for result in results:
 
-        '''(corner_a, corner_b, corner_c, corner_d) = result.corners
+        (corner_a, corner_b, corner_c, corner_d) = result.getCorners()
 
         corner_a = (int(corner_a[0]), int(corner_a[1]))
         corner_b = (int(corner_b[0]), int(corner_b[1]))
@@ -65,7 +65,7 @@ while True:
         fontScale = 1
         color = (255, 0, 255)
         thickness = 2
-        frame = cv2.putText(frame, str(result.tag_id), corner_a, font, fontScale, color, thickness, cv2.LINE_AA)'''
+        frame = cv2.putText(frame, str(result.tag_id), corner_a, font, fontScale, color, thickness, cv2.LINE_AA)
         
         if result.pose_t is not None:
             t = result.pose_t.flatten()

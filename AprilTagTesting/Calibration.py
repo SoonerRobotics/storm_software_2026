@@ -52,9 +52,11 @@ for fname in images:
         h,  w = img.shape[:2]
         newcameramtx, roi = cv.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1, (w,h))
         np.savetxt('calibration_matrix.txt', mtx)
+        np.savetxt('distortion_coefficients.txt', dist)
 
         # undistort
         dst = cv.undistort(img, mtx, dist, None, newcameramtx)
+        
 
         # crop the image
         x, y, w, h = roi
