@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Client</title>
+  <link rel="shortcut icon" href="#" />
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" defer src="script.js"></script>
+</head>
+
+<body>
+  <p id="example"></p>
+
+  <!--Layout-->
+  <div class="layout">
+
+    <!--Left Column-->
+    <div class=" column left">
+
+      <!--Camera-->
+      <div class="cameradiv">
+        <video id='remoteCam' width="640" height="480" controls autoplay>
+        </video>
+      </div>
+
+      <!--Robot Commands-->
+      <div class="commandsdiv">
+        <div class="startbotdiv">
+          <h1>Start</h1>
+        </div>
+
+        <div class="stopbotdiv">
+          <h1>Stop</h1>
+        </div>
+
+        <div class="runautodiv">
+          <h1>Autonomous</h1>
+        </div>
+      </div>
+      <!--Logs/Terminal Output/Messages-->
+      <div class="logdiv">
+        <h1>Logs/Messages/Terminal Output</h1>
+      </div>
+    </div>
+
+    <!--Right Column-->
+    <div class=" column right">
+      <!--Robot Status Indicators-->
+      <div class="botstatusdiv">
+        <h1>Status Indicators</h1>
+      </div>
+
+      <!--Map-->
+      <div class="mapdiv">
+        <h1>Map</h1>
+      </div>
+
+      <!--Software Process Status-->
+      <div class="softstatusdiv">
+        <h1>Software Process Status</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Required for reusing the same html on the robot and base station -->
+  <video id='localCam' width="1" height="1" controls autoplay>
+    Your browser does not support the video tag.
+  </video>
+</body>
+
+</html>
