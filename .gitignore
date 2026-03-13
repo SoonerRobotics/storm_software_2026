@@ -1,3 +1,6 @@
 Pictures/
 .vscode/
 apriltag-js-standalone/
+AprilTagTesting/testmodules.py
+calibration_matrix.txt
+calibresult.pn
