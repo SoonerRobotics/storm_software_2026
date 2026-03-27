@@ -65,7 +65,7 @@ def Estimate():
         pose = estimator.estimate(result)
 
         poses_x[i] = pose.X() * 39.37008 #Convert to inches
-        poses_z[i] = pose.Z() * 39.37008
+        poses_z[i] = pose.Z() * 39.37008 / 1.2
 
         poses_rot_y[i] = -pose.rotation().y_degrees
 
@@ -79,4 +79,3 @@ def Estimate():
 def set_close():
     cap.release()
     cv2.destroyAllWindows()
-

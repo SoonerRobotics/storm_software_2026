@@ -31,8 +31,8 @@ at_detector.setConfig(detect_config)
 at_detector.addFamily('tag36h11')
 
 #Parameters: image to detect from, whether or not to estimate the position, camera calibration, AprilTag size
-camera_params = [1.389128301095909592e+03, 1.411771668458814474e+03, 1.023578058929374038e+03, 5.617593978785050695e+02] #Web cam
-#camera_params = [1211.2034279937993, 1204.865899413857, 945.3223945388609, 557.9796530877504] #Global shutter
+#camera_params = [1.389128301095909592e+03, 1.411771668458814474e+03, 1.023578058929374038e+03, 5.617593978785050695e+02] #Web cam
+camera_params = [1050.816696696429, 1052.3625653531274, 931.4257968018201, 531.4278420987749] #Global shutter
 tag_size = 0.0635   #small
 #tag_size = 0.1   #medium
 
