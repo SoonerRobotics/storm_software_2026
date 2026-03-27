@@ -7,13 +7,16 @@ field = json.load(open("AprilTagTesting/Storm.json"))
 '''local_x = 0
 local_y = 0
 rotation = 0'''
+
+#In this version i'm trying to just use the tag with the lowest local rotation for estimation
+#so it might be more accurate
 while True:
     a.Estimate()
 
-    local_x = 0
-    local_y = 0
+    #placeholder for loop
     rotation = 700
 
+    #tag with lowest rot
     tag_to_use = 0
 
     curr_local_x = 0
@@ -24,7 +27,9 @@ while True:
         if a.poses_rot_y[i] < rotation:
             tag_to_use = i
 
+    #field rotation of the tag
     tag_rot = field["tags"][a.tags_ID[tag_to_use]]["pose"]["rotation"]
+
     if(tag_rot == 0):
         print("Facing front(spinny wheels)")
         curr_local_x += field["tags"][a.tags_ID[tag_to_use]]["pose"]["translation"]["x"] - a.poses_x[tag_to_use]
@@ -45,9 +50,12 @@ while True:
         curr_local_x += field["tags"][a.tags_ID[tag_to_use]]["pose"]["translation"]["x"] + a.poses_z[tag_to_use]
         curr_local_y += field["tags"][a.tags_ID[tag_to_use]]["pose"]["translation"]["y"] - a.poses_x[tag_to_use]
 
+    #robot field position
     curr_rotation = tag_rot + a.poses_rot_y[tag_to_use]
-        
+    
+    #make sure its positive
     curr_rotation = abs(curr_rotation)
+    
     print("Camera X (horizontal): " + str(a.poses_x[tag_to_use]) + " in")
     print("Camera Z (depth): " + str(a.poses_z[tag_to_use]) + " in")
     print("Individual Field X: " + str(curr_local_x) + " in")
