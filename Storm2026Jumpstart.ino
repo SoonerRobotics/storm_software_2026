@@ -206,7 +206,7 @@ void setup() {
       break;
   }
 
-  ISR_timer.setInterval(2000L, adjustVoltage);
+  ISR_timer.setInterval(500L, adjustVoltage);
 }
 
 
