@@ -8,6 +8,14 @@ import time
 
 from typing import Callable, List, Self
 
+class Joystick:
+    def __init__(self):
+        #TODO FIXME
+        pass
+
+    def update(self, message: None) -> None:
+        pass #TODO FIXME
+
 
 class Action:
     """
@@ -74,9 +82,6 @@ class SequentialAction(Action):
         return False
 
     
-
-
-
 class ActionScheduler:
     """TODO: documentation"""
 
