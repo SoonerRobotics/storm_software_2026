@@ -8,13 +8,45 @@ import time
 
 from typing import Callable, List, Self
 
+class JoystickMessage:
+    def __init__(self, a: bool, b: bool, x: bool, y: bool, left_bumper: bool, right_bumper: bool, left_stick: bool, right_stick: bool, xbox_button: bool, menu: bool, screenshot: bool, dpad: int, left_stick_x: float, left_stick_y: float, right_stick_x: float, right_stick_y: float, left_trigger: float, right_trigger: float) -> None:
+        #TODO FIXME fix the order of this maybe?
+        self.a = a
+        self.b = b
+        self.x = x
+        self.y = y
+
+        self.left_bumper = left_bumper
+        self.right_bumper = right_bumper
+
+        self.left_stick = left_stick
+        self.right_stick = right_stick
+
+        self.xbox_button = xbox_button
+        self.menu = menu
+        self.screenshot = screenshot
+
+        self.dpad = dpad
+
+        self.left_stick_x = left_stick_x
+        self.left_stick_y = left_stick_y
+
+        self.right_stick_x = right_stick_x
+        self.right_stick_y = right_stick_y
+
+        self.left_trigger = left_trigger
+        self.right_trigger = right_trigger
+
+#TODO FIXME is this even correct?
+DEFAULT_JOYSTICK_MESSAGE = JoystickMessage(False, False, False, False, False, False, False, False, False, False, False, -1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+
 class Joystick:
     def __init__(self):
-        #TODO FIXME
-        pass
+        self.message = DEFAULT_JOYSTICK_MESSAGE
 
-    def update(self, message: None) -> None:
-        pass #TODO FIXME
+    def update(self, message: JoystickMessage) -> None:
+        self.message = message
 
 
 class Action:

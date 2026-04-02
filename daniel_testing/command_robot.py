@@ -2,7 +2,7 @@ import asyncio
 
 from websockets.sync.client import connect
 
-from daniel_testing.command_framework import Action, ActionScheduler, Trigger
+from daniel_testing.command_framework import Action, ActionScheduler, Joystick, Trigger
 
 
 BASE_STATION_ADDRESS = "http://127.0.0.1" #TODO port and actual address
@@ -15,6 +15,8 @@ async def main():
     scheduler = ActionScheduler()
 
     # set up buttons
+    joystick = Joystick()
+
     aButton = Trigger(scheduler)
     bButton = Trigger(scheduler)
     xButton = Trigger(scheduler)
@@ -24,6 +26,13 @@ async def main():
 
     #TODO FIXME ???
     driveAction = Action(callback, -1)
+
+    autonomous_programs = []
+    autonomous_index = -1 #TODO FIXME we should have a default though
+
+    
+
+    # on message recieved
 
     # with connect(BASE_STATION_ADDRESS) as base_station:
     #     async def robot_loop():
