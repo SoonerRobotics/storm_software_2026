@@ -1,0 +1,128 @@
+{
+  "tags": [
+    {
+      "ID": 0,
+      "pose": {
+        "translation": {
+          "x": 187.217,
+          "y": 71.5
+        },
+        "rotation": 90
+      }
+    },
+    {
+      "ID": 1,
+      "pose": {
+        "translation": {
+          "x": 150.2,
+          "y": 94.782
+        },
+        "rotation": 0
+      }
+    },
+    {
+      "ID": 2,
+      "pose": {
+        "translation": {
+          "x": 121.6,
+          "y": 91.117
+        },
+        "rotation": 0
+      }
+    },
+    {
+      "ID": 3,
+      "pose": {
+        "translation": {
+          "x": 70.551,
+          "y": 91.117
+        },
+        "rotation": 0
+      }
+    },
+    {
+      "ID": 4,
+      "pose": {
+        "translation": {
+          "x": 42.1,
+          "y": 94.742
+        },
+        "rotation": 0
+      }
+    },
+    {
+      "ID": 5,
+      "pose": {
+        "translation": {
+          "x": 4.983,
+          "y": 71.4
+        },
+        "rotation": 270
+      }
+    },
+    {
+      "ID": 6,
+      "pose": {
+        "translation": {
+          "x": 42.217,
+          "y": 43.5
+        },
+        "rotation": 90
+      }
+    },
+    {
+      "ID": 7,
+      "pose": {
+        "translation": {
+          "x": 52.883,
+          "y": 24.05
+        },
+        "rotation": 270
+      }
+    },
+    {
+      "ID": 8,
+      "pose": {
+        "translation": {
+          "x": 71.6,
+          "y": 4.883
+        },
+        "rotation": 180
+      }
+    },
+    {
+      "ID": 9,
+      "pose": {
+        "translation": {
+          "x": 119.5,
+          "y": 4.883
+        },
+        "rotation": 180
+      }
+    },
+    {
+      "ID": 10,
+      "pose": {
+        "translation": {
+          "x": 138.317,
+          "y": 24.05
+        },
+        "rotation": 90
+      }
+    },
+    {
+      "ID": 11,
+      "pose": {
+        "translation": {
+          "x": 148.983,
+          "y": 43.5
+        },
+        "rotation": 270
+      }
+    }
+  ],
+  "field": {
+    "length": 96,
+    "width": 192
+  }
+}
