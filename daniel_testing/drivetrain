@@ -1,0 +1,40 @@
+digraph Drivetrain {
+label=Drivetrain;
+fontname=Arial;
+fontsize="10pt";
+rankdir=LR;
+compound=true;
+subgraph drivetrain_anchor_initial {
+label="";
+peripheries=0;
+margin=0;
+drivetrain_anchor [label="", shape=point, style=filled, fontsize="1pt", fixedsize=true, width=0.2, height=0.2, fillcolor=black];
+}
+subgraph cluster_drivetrain_anchor_atomic {
+label="";
+peripheries=0;
+cluster=true;
+OFF [label=Off, shape=rectangle, style="rounded, filled", fontname=Arial, fontsize="10pt", peripheries=1, penwidth=2, fillcolor=turquoise];
+DRIVING_TIMED [label="Driving timed", shape=rectangle, style="rounded, filled", fontname=Arial, fontsize="10pt", peripheries=1, fillcolor=white];
+TURNING_TIMED [label="Turning timed", shape=rectangle, style="rounded, filled", fontname=Arial, fontsize="10pt", peripheries=1, fillcolor=white];
+TELEOP [label=Teleop, shape=rectangle, style="rounded, filled", fontname=Arial, fontsize="10pt", peripheries=1, fillcolor=white];
+LINING_UP [label="Lining up", shape=rectangle, style="rounded, filled", fontname=Arial, fontsize="10pt", peripheries=1, fillcolor=white];
+}
+drivetrain_anchor -> OFF [label="", color=blue, fontname=Arial, fontsize="9pt"];
+OFF -> LINING_UP [label="lining_up", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+OFF -> DRIVING_TIMED [label="driving_autonomous", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+OFF -> TURNING_TIMED [label="turning_autonomous", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+OFF -> TELEOP [label="driving_teleop", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+DRIVING_TIMED -> LINING_UP [label="lining_up", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+DRIVING_TIMED -> TURNING_TIMED [label="turning_autonomous", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+DRIVING_TIMED -> TELEOP [label="driving_teleop", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+TURNING_TIMED -> LINING_UP [label="lining_up", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+TURNING_TIMED -> DRIVING_TIMED [label="driving_autonomous", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+TURNING_TIMED -> TELEOP [label="driving_teleop", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+TELEOP -> LINING_UP [label="lining_up", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+TELEOP -> DRIVING_TIMED [label="driving_autonomous", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+TELEOP -> TURNING_TIMED [label="turning_autonomous", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+LINING_UP -> DRIVING_TIMED [label="driving_autonomous", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+LINING_UP -> TURNING_TIMED [label="turning_autonomous", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+LINING_UP -> TELEOP [label="driving_teleop", color=blue, fontname=Arial, fontsize="9pt", minlen=1];
+}
