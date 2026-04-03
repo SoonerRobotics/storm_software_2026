@@ -1,0 +1,99 @@
+h1 {
+    color: slategray;
+    text-align: center;
+}
+
+.layout {
+    background-color: lightslategray;
+    padding: 25px;
+    margin: 10px;
+    display: flex;
+    gap: 20px;
+    box-sizing: border-box;
+}
+
+.column {
+    background-color: white;
+    box-sizing: border-box;
+    padding: 25px;
+    flex: 1;
+    height: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Left Column */
+.cameradiv {
+    background-color: pink;
+    flex: 2 1 0;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+/* Commands */
+.commandsdiv {
+    display: flex;
+    gap: 10px;
+}
+
+.startbotdiv {
+    background-color: lightblue;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    padding: 10px;
+}
+
+.stopbotdiv {
+    background-color: lightgoldenrodyellow;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    padding: 10px;
+}
+
+.runautodiv {
+    background-color: lightsteelblue;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    padding: 10px;
+}
+
+.logdiv {
+    background-color: lightcoral;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+/* Right Column */
+.botstatusdiv {
+    background-color: pink;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+.mapdiv {
+    background-color: lightblue;
+    flex: 2 1 0;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+
+.softstatusdiv {
+    background-color: lightgoldenrodyellow;
+    flex: 1.5 1 0;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
