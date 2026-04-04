@@ -8,10 +8,6 @@ import signal
 import serial
 import struct
 import os
-import base64
-
-import cv2
-import numpy as np
 
 from constants.constants import CONTROLLER_SENDER, ROBOT_SENDER, SERVER_URL
 
@@ -130,6 +126,8 @@ class ControllerState:
     trigger_left: float = 0.0
     trigger_right: float = 0.0
 
+
+
 # generate serial message to be sent to Pico
 def pack_robot_command(cmd: RobotCommand) -> bytes:
     # okay so this is assuming we're doing a mega-message and not variable-size messages
@@ -169,6 +167,8 @@ class RobotClient:
 
         self.controller_state = ControllerState()
         self.robot_cmd = RobotCommand()
+
+        #TODO FIXME have a callback to check FMS periodically? or like... idk man...
 
         # try to open serial connection to Pico
         self.try_open_serial()
@@ -218,23 +218,41 @@ class RobotClient:
         s = self.controller_state
         cmd = self.robot_cmd
 
-        # 1) Drive (mecanum)
+        # Drive (mecanum)
         cmd.left_front_drive_motor,  \
         cmd.left_back_drive_motor,   \
         cmd.right_front_drive_motor, \
         cmd.right_back_drive_motor = mecanum_blend(s.left_stick_x, s.left_stick_y, s.right_stick_x)
 
-        # 2) Intake: right bumper in, left bumper out
-        #TODO FIXME
+        # Intake: right bumper in, left bumper out
+        if s.right_bumper:
+            cmd.intake_motor = INTAKE_IN_SPEED
+        elif s.left_bumper:
+            cmd.intake_motor = INTAKE_OUT_SPEED
+        else:
+            cmd.intake_motor = 0.0
 
-        # 3) Arm base presets (A/B/X/Y)
-        #TODO FIXME
+        # Arm: score high/low, grab battery, stow        
+        if s.dpad_top:
+            cmd.arm_servo_pos = ARM_BASE_HIGH
+        elif s.dpad_bottom:
+            cmd.arm_servo_pos = ARM_BASE_LOW
+        else:
+            pass #TODO FIXME?
 
         # 4) Claw open/close: D-pad up/down
-        #TODO FIXME
+        if s.button_y:
+            cmd.claw_servo_pos = CLAW_OPEN # release battery
+        elif s.button_a:
+            cmd.claw_servo_pos = CLAW_CLOSED #TODO FIXME do we have to continuously keep this or will it stay if we only set it once (pico firmware?)
 
         # 5) Linear arm extension: right stick Y (manual)
-        #TODO FIXME
+        if s.button_x:
+            cmd.arm_extend_motor = SLIDE_RETRACT_SPEED
+        elif s.button_b:
+            cmd.arm_extend_motor = SLIDE_EXTEND_SPEED
+        else:
+            cmd.arm_extend_motor = SLIDE_STOW_SPEED
 
         # 6) Climb presets: left/center/right buttons
         #TODO FIXME
