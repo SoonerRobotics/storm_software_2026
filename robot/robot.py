@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 import json
 import time
 from typing import List
@@ -9,7 +10,7 @@ import serial
 import struct
 import os
 
-from constants.constants import CONTROLLER_SENDER, ROBOT_SENDER, SERVER_URL
+from constants.constants import APRILTAG_SENDER, CONTROLLER_SENDER, GUI_SENDER, ROBOT_SENDER, SERVER_URL
 
 # Controller configuration
 DEADZONE   = 0.05
@@ -126,7 +127,17 @@ class ControllerState:
     trigger_left: float = 0.0
     trigger_right: float = 0.0
 
+class RobotState(Enum):
+    OFF = 0
+    AUTONOMOUS = 1
+    TELEOP = 2
+    TEST = 3
 
+class ArmState(Enum):
+    STOWED = 0 # starting configuration
+    PICKING_UP = 1
+    SCORING_LOW = 2
+    SCORING_HIGH = 3
 
 # generate serial message to be sent to Pico
 def pack_robot_command(cmd: RobotCommand) -> bytes:
@@ -167,6 +178,7 @@ class RobotClient:
 
         self.controller_state = ControllerState()
         self.robot_cmd = RobotCommand()
+        self.robot_state = RobotState.OFF #FIXME ???
 
         #TODO FIXME have a callback to check FMS periodically? or like... idk man...
 
@@ -193,11 +205,39 @@ class RobotClient:
                 return
             
             payload = json.loads(msg["data"])
-            if payload.get("id") == 10 and msg.get("sender") == CONTROLLER_SENDER:
+            msg_id = payload.get("id")
+
+            #TODO FIXME separate one for autonomous???
+
+            # update robot state
+            if msg_id == 30 and msg.get("sender") == GUI_SENDER:
+                pass #TODO FIXME update robot state
+
+            # update controller state for robot control
+            elif msg_id == 10 and msg.get("sender") == CONTROLLER_SENDER:
                 with self.lock:
-                    #FIXME
-                    self.controller_state = ControllerState()
-                    self.controller_state.button_a = payload.get("button_a")
+                    self.controller_state.left_stick_x = payload.get("left_stick_x")
+                    self.controller_state.left_stick_y = payload.get("left_stick_y")
+                    self.controller_state.right_stick_x = payload.get("right_stick_x")
+                    self.controller_state.right_stick_y = payload.get("right_stick_y")
+                    self.controller_state.left_stick_button= payload.get("left_stick_button")
+                    self.controller_state.right_stick_button= payload.get("right_stick_button")
+                    self.controller_state.button_a= payload.get("button_a")
+                    self.controller_state.button_b= payload.get("button_b")
+                    self.controller_state.button_x= payload.get("button_x")
+                    self.controller_state.button_y= payload.get("button_y")
+                    self.controller_state.left_bumper= payload.get("left_bumper")
+                    self.controller_state.right_bumper= payload.get("right_bumper")
+                    self.controller_state.dpad_top= payload.get("dpad_top")
+                    self.controller_state.dpad_bottom= payload.get("dpad_bottom")
+                    self.controller_state.dpad_left= payload.get("dpad_left")
+                    self.controller_state.dpad_right= payload.get("dpad_right")
+                    self.controller_state.trigger_left = payload.get("trigger_left")
+                    self.controller_state.trigger_right = payload.get("trigger_right")
+            
+            # update robot position/alignment from AprilTag process
+            elif msg_id == 141 and msg.get("sender") == APRILTAG_SENDER:
+                pass #TODO
 
         except Exception as e:
             print(f"[Robot] WS message error: {e}")
@@ -240,13 +280,21 @@ class RobotClient:
         else:
             pass #TODO FIXME?
 
-        # 4) Claw open/close: D-pad up/down
+        # Wrist: score left/right, grab battery
+        if s.dpad_left:
+            cmd.wrist_servo_pos = WRIST_LEFT
+        elif s.dpad_right:
+            cmd.wrist_servo_pos = WRIST_RIGHT
+        else: #FIXME this is bad idea
+            cmd.wrist_servo_pos = WRIST_PICK
+
+        # Claw: open/close
         if s.button_y:
             cmd.claw_servo_pos = CLAW_OPEN # release battery
         elif s.button_a:
             cmd.claw_servo_pos = CLAW_CLOSED #TODO FIXME do we have to continuously keep this or will it stay if we only set it once (pico firmware?)
 
-        # 5) Linear arm extension: right stick Y (manual)
+        # Linear arm extension
         if s.button_x:
             cmd.arm_extend_motor = SLIDE_RETRACT_SPEED
         elif s.button_b:

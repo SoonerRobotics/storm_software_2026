@@ -9,10 +9,9 @@ import cv2
 import websocket
 
 from constants import constants
-from constants.constants import CAM_DESTINATION, CAM_SENDER, SERVER_URL
+from constants.constants import CAM_DESTINATION, CAM_SENDER, DRIVER_CAM_DEVICE_INDEX, SERVER_URL
 
 # Camera config
-CAM_DEVICE_INDEX = 0          # /dev/video0
 CAM_WIDTH        = 640
 CAM_HEIGHT       = 360
 CAM_FPS          = 10.0       # desired send rate
@@ -74,7 +73,7 @@ class CameraClient:
             pass
 
 def camera_loop(cam_client: CameraClient):
-    cap = cv2.VideoCapture(CAM_DEVICE_INDEX)
+    cap = cv2.VideoCapture(DRIVER_CAM_DEVICE_INDEX)
     if not cap.isOpened():
         print("[Camera] Failed to open camera")
         return
