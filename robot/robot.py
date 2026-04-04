@@ -137,7 +137,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
 
     #FIXME is it supposed to be little or big endian?
     msg = struct.pack(">c14Bc",
-                      "$",
+                      START_BYTE,
                       scale_motor_speed(cmd.left_front_drive_motor),
                       scale_motor_speed(cmd.left_back_drive_motor),
                       scale_motor_speed(cmd.right_front_drive_motor),
@@ -149,7 +149,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
                       cmd.claw_servo_pos,
                       scale_motor_speed(cmd.climb_motor_speed),
                       cmd.jumpstart_voltage,
-                      "!")
+                      END_BYTE)
     return msg
 
 # ---------- Robot control client ----------
