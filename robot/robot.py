@@ -13,12 +13,7 @@ import base64
 import cv2
 import numpy as np
 
-SERVER_URL = "ws://192.168.1.123:1909"
-
-ROBOT_SENDER      = "3"   # robot control sender id
-CONTROLLER_SENDER = "1"   # controller client id
-CAM_SENDER        = "3_cam"
-CAM_DESTINATION   = "4"   # UI / operator client id for video
+from constants.constants import CONTROLLER_SENDER, ROBOT_SENDER, SERVER_URL
 
 # Controller configuration
 DEADZONE   = 0.05
@@ -29,12 +24,6 @@ SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE   = 115200
 START_BYTE = b"$"
 END_BYTE = b"!"
-
-# Camera config
-CAM_DEVICE_INDEX = 0          # /dev/video0
-CAM_WIDTH        = 640
-CAM_HEIGHT       = 360
-CAM_FPS          = 10.0       # desired send rate
 
 # ---------- Preset positions (0.0-1.0 normalized) ----------
 ARM_BASE_STOW  = 0.8
@@ -294,12 +283,6 @@ if __name__ == "__main__":
         print("Tip: for serial, add your user to 'dialout' or run with sudo.")
 
     robot = RobotClient(SERVER_URL)
-    cam_client = CameraClient(SERVER_URL)
-
-    # Start camera WS connection & loop
-    cam_client.connect()
-    cam_thread = threading.Thread(target=camera_loop, args=(cam_client,), daemon=True)
-    cam_thread.start()
 
     try:
         robot.run()
@@ -307,4 +290,3 @@ if __name__ == "__main__":
         pass
 
     robot.shutdown()
-    cam_client.shutdown()

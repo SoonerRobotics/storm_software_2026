@@ -1,4 +1,22 @@
+
+
 # ---------- Camera sender client ----------
+import base64
+import json
+import threading
+import time
+import cv2
+import websocket
+
+from constants import constants
+from constants.constants import CAM_DESTINATION, CAM_SENDER, SERVER_URL
+
+# Camera config
+CAM_DEVICE_INDEX = 0          # /dev/video0
+CAM_WIDTH        = 640
+CAM_HEIGHT       = 360
+CAM_FPS          = 10.0       # desired send rate
+
 class CameraClient:
     def __init__(self, server_url):
         self.server_url = server_url
@@ -83,3 +101,15 @@ def camera_loop(cam_client: CameraClient):
 
     cap.release()
     print("[Camera] Loop ended")
+
+def main():
+    cam_client = CameraClient(SERVER_URL)
+
+    # Start camera WS connection & loop
+    cam_client.connect()
+    cam_thread = threading.Thread(target=camera_loop, args=(cam_client,), daemon=True)
+    cam_thread.start()
+    cam_client.shutdown()
+
+if __name__ == "__main__":
+    main()
