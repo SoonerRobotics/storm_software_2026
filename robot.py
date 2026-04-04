@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 import json
 import time
+from typing import List
 import websocket
 import threading
 import signal
@@ -18,10 +20,15 @@ CONTROLLER_SENDER = "1"   # controller client id
 CAM_SENDER        = "3_cam"
 CAM_DESTINATION   = "4"   # UI / operator client id for video
 
+# Controller configuration
 DEADZONE   = 0.05
+UPDATE_HZ   = 50.0
+
+# Pico 2 (PCB/electrical) config
 SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE   = 115200
-UPDATE_HZ   = 50.0
+START_BYTE = b"$"
+END_BYTE = b"!"
 
 # Camera config
 CAM_DEVICE_INDEX = 0          # /dev/video0
@@ -30,23 +37,32 @@ CAM_HEIGHT       = 360
 CAM_FPS          = 10.0       # desired send rate
 
 # ---------- Preset positions (0.0-1.0 normalized) ----------
-ARM_BASE_STOW   = 0.2
+ARM_BASE_STOW  = 0.8
 ARM_BASE_PICK   = 0.5
-ARM_BASE_DROP_1 = 0.6
-ARM_BASE_DROP_2 = 0.7
-ARM_BASE_DROP_3 = 0.8
-ARM_BASE_DROP_4 = 0.9
+ARM_BASE_LOW = 0.6
+ARM_BASE_HIGH = 0.7
 
 WRIST_STOW   = 0.2
 WRIST_PICK   = 0.7
-WRIST_DROP   = 0.5
+WRIST_LEFT   = 0.5
+WRIST_RIGHT   = 0.5
 
 CLAW_OPEN    = 0.2
 CLAW_CLOSED  = 0.8
 
+SLIDE_EXTEND_SPEED = 0.1
+SLIDE_RETRACT_SPEED = -0.1
+SLIDE_STOW_SPEED = -0.05
+
+INTAKE_IN_SPEED = 0.5
+INTAKE_OUT_SPEED = -0.3
+
 CLIMB_STOW   = 0.0
 CLIMB_HOOK   = 0.5
 CLIMB_UP     = 1.0
+
+MAX_DRIVE_SPEED = 1.0
+MAX_TURN_SPEED = 1.0
 
 # ---------- Helpers ----------
 def clamp(value, min_val=-1.0, max_val=1.0):
@@ -55,14 +71,14 @@ def clamp(value, min_val=-1.0, max_val=1.0):
 def apply_deadzone(v, dz=DEADZONE):
     return 0.0 if abs(v) < dz else v
 
-def normalize_wheels(wheels):
+def normalize_wheels(wheels: List[float]) -> List[float]:
     m = max(abs(w) for w in wheels)
     return [w / m for w in wheels] if m > 1.0 else wheels
 
-def mecanum_blend(left_x, left_y, trig_l, trig_r):
-    vx = clamp(apply_deadzone(left_y))               # forward/back
-    vy = clamp(apply_deadzone(trig_r - trig_l))      # strafe right-left
-    omega = clamp(apply_deadzone(left_x))            # turn
+def mecanum_blend(x: float, y: float, w: float) -> List[float]:
+    vx = clamp(apply_deadzone(x))      # forward/back
+    vy = clamp(apply_deadzone(y))      # strafe right-left
+    omega = clamp(apply_deadzone(w))   # turn
 
     fl = vx + vy + omega
     fr = vx - vy - omega
@@ -71,60 +87,81 @@ def mecanum_blend(left_x, left_y, trig_l, trig_r):
     return normalize_wheels([fl, fr, bl, br])
 
 # ---------- Robot command struct (Pi -> Pico) ----------
-def float_to_int16(v):
-    v = clamp(v, -1.0, 1.0)
-    return int(v * 32767)
+# needs to be between 0 and 255. assumes speed is a signed percentage float.
+def scale_motor_speed(speed: float) -> int:
+    return int(127 * speed) + 127
 
-def norm01_to_u16(v):
-    v = max(0.0, min(1.0, v))
-    return int(v * 65535)
+# needs to be between 0 and 255. assumes pos is degrees. FIXME do we even need this?
+# def normalize_servo_pos(pos: int) -> float:
+#     return float(pos / 360.0)
 
-def default_robot_command():
-    return {
-        "drive": [0.0, 0.0, 0.0, 0.0],
-        "intake_power": 0.0,
-        "arm_base_pos": ARM_BASE_STOW,
-        "wrist_pos": WRIST_STOW,
-        "claw_pos": CLAW_OPEN,
-        "climb_pos": CLIMB_STOW,
-        "arm_extend_power": 0.0,
-        "voltage_device_on": False,
-        "wheel_rpm_target": 0
-    }
 
-def pack_robot_command(cmd):
-    drive_fl, drive_fr, drive_bl, drive_br = cmd["drive"]
-    intake_power = cmd["intake_power"]
-    arm_base_pos = cmd["arm_base_pos"]
-    wrist_pos    = cmd["wrist_pos"]
-    claw_pos     = cmd["claw_pos"]
-    climb_pos    = cmd["climb_pos"]
-    arm_extend_power = cmd["arm_extend_power"]
-    voltage_on   = cmd["voltage_device_on"]
-    wheel_rpm    = cmd["wheel_rpm_target"]
+#FIXME are these good default values?
+@dataclass
+class RobotCommand:
+    left_front_drive_motor: float = 0.0
+    left_back_drive_motor: float = 0.0
+    right_front_drive_motor: float = 0.0
+    right_back_drive_motor: float = 0.0
 
-    flags = 0
-    if voltage_on:
-        flags |= 0x01
+    intake_motor: float = 0.0
 
-    # Layout: <5h5HBBH
-    data = struct.pack(
-        "<5h5HBBH",
-        float_to_int16(drive_fl),
-        float_to_int16(drive_fr),
-        float_to_int16(drive_bl),
-        float_to_int16(drive_br),
-        float_to_int16(intake_power),
-        norm01_to_u16(arm_base_pos),
-        norm01_to_u16(wrist_pos),
-        norm01_to_u16(claw_pos),
-        norm01_to_u16(climb_pos),
-        norm01_to_u16((arm_extend_power + 1.0) / 2.0),  # -1..1 -> 0..1
-        flags,
-        0,  # reserved
-        int(max(0, min(65535, wheel_rpm)))
-    )
-    return data
+    arm_servo_pos: float = ARM_BASE_STOW
+    arm_extend_motor: float = 0.0
+    wrist_servo_pos: float = WRIST_STOW
+    claw_servo_pos: float = CLAW_CLOSED
+    
+    climb_motor_speed: float = 0.0
+
+    jumpstart_voltage: int = 0
+
+@dataclass
+class ControllerState:
+    left_stick_x: float = 0.0
+    left_stick_y: float = 0.0
+    right_stick_x: float = 0.0
+    right_stick_y: float = 0.0
+
+    left_stick_button: bool = False
+    right_stick_button: bool = False
+
+    button_a: bool = False
+    button_b: bool = False
+    button_x: bool = False
+    button_y: bool = False
+
+    left_bumper: bool = False
+    right_bumper: bool = False
+
+    dpad_top: bool = False
+    dpad_bottom: bool = False
+    dpad_left: bool = False
+    dpad_right: bool = False
+
+    trigger_left: float = 0.0
+    trigger_right: float = 0.0
+
+# generate serial message to be sent to Pico
+def pack_robot_command(cmd: RobotCommand) -> bytes:
+    # okay so this is assuming we're doing a mega-message and not variable-size messages
+    # so no COMMAND bytes, but keeping the start and end bytes
+
+    #FIXME is it supposed to be little or big endian?
+    msg = struct.pack(">c14Bc",
+                      "$",
+                      scale_motor_speed(cmd.left_front_drive_motor),
+                      scale_motor_speed(cmd.left_back_drive_motor),
+                      scale_motor_speed(cmd.right_front_drive_motor),
+                      scale_motor_speed(cmd.right_back_drive_motor),
+                      scale_motor_speed(cmd.arm_extend_motor),
+                      scale_motor_speed(cmd.intake_motor),
+                      cmd.arm_servo_pos,
+                      cmd.wrist_servo_pos,
+                      cmd.claw_servo_pos,
+                      scale_motor_speed(cmd.climb_motor_speed),
+                      cmd.jumpstart_voltage,
+                      "!")
+    return msg
 
 # ---------- Robot control client ----------
 class RobotClient:
@@ -136,33 +173,24 @@ class RobotClient:
             on_close=self.on_close,
             on_error=self.on_error
         )
-        self.lock = threading.Lock()
-        self.controller_state = self.default_controller_state()
-        self.robot_cmd = default_robot_command()
-        self.stop_event = threading.Event()
         self.connected_ws = False
 
+        self.lock = threading.Lock()
+        self.stop_event = threading.Event()
+
+        self.controller_state = ControllerState()
+        self.robot_cmd = RobotCommand()
+
+        # try to open serial connection to Pico
+        self.try_open_serial()
+
+    def try_open_serial(self):
         try:
-            self.serial = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0)
+            self.serial = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.5)
             print(f"[Robot] Serial connected on {SERIAL_PORT}")
         except Exception as e:
             self.serial = None
             print(f"[Robot] Serial open failed: {e}")
-
-    def default_controller_state(self):
-        return {
-            "id": 10,
-            "left_stick_x": 0.0, "left_stick_y": 0.0,
-            "right_stick_x": 0.0, "right_stick_y": 0.0,
-            "left_stick_button": False, "right_stick_button": False,
-            "button_a": False, "button_b": False,
-            "button_x": False, "button_y": False,
-            "button_left_bumper": False, "button_right_bumper": False,
-            "button_center": False, "button_left": False, "button_right": False,
-            "dpad_top": False, "dpad_left": False,
-            "dpad_right": False, "dpad_bottom": False,
-            "trigger_left": 0.0, "trigger_right": 0.0
-        }
 
     # --- WebSocket callbacks ---
     def on_open(self, ws):
@@ -174,15 +202,22 @@ class RobotClient:
             msg = json.loads(raw)
             if msg.get("destination") != ROBOT_SENDER:
                 return
+            
             payload = json.loads(msg["data"])
             if payload.get("id") == 10 and msg.get("sender") == CONTROLLER_SENDER:
                 with self.lock:
-                    self.controller_state.update(payload)
+                    #FIXME
+                    self.controller_state = ControllerState()
+                    self.controller_state.button_a = payload.get("button_a")
+
         except Exception as e:
             print(f"[Robot] WS message error: {e}")
 
     def on_close(self, ws, code, reason):
         print("[Robot] WS closed:", code, reason)
+
+        #TODO: send a 'kill everything' message to robot?
+
         self.connected_ws = False
         self.stop_event.set()
 
@@ -195,67 +230,36 @@ class RobotClient:
         cmd = self.robot_cmd
 
         # 1) Drive (mecanum)
-        cmd["drive"] = mecanum_blend(
-            s["left_stick_x"],
-            s["left_stick_y"],
-            s["trigger_left"],
-            s["trigger_right"]
-        )
+        cmd.left_front_drive_motor,  \
+        cmd.left_back_drive_motor,   \
+        cmd.right_front_drive_motor, \
+        cmd.right_back_drive_motor = mecanum_blend(s.left_stick_x, s.left_stick_y, s.right_stick_x)
 
         # 2) Intake: right bumper in, left bumper out
-        if s["button_right_bumper"]:
-            cmd["intake_power"] = 1.0
-        elif s["button_left_bumper"]:
-            cmd["intake_power"] = -1.0
-        else:
-            cmd["intake_power"] = 0.0
+        #TODO FIXME
 
         # 3) Arm base presets (A/B/X/Y)
-        if s["button_a"]:
-            cmd["arm_base_pos"] = ARM_BASE_PICK
-            cmd["wrist_pos"]    = WRIST_PICK
-        elif s["button_b"]:
-            cmd["arm_base_pos"] = ARM_BASE_DROP_1
-            cmd["wrist_pos"]    = WRIST_DROP
-        elif s["button_x"]:
-            cmd["arm_base_pos"] = ARM_BASE_DROP_2
-            cmd["wrist_pos"]    = WRIST_DROP
-        elif s["button_y"]:
-            cmd["arm_base_pos"] = ARM_BASE_DROP_3
-            cmd["wrist_pos"]    = WRIST_DROP
+        #TODO FIXME
 
         # 4) Claw open/close: D-pad up/down
-        if s["dpad_top"]:
-            cmd["claw_pos"] = CLAW_OPEN
-        elif s["dpad_bottom"]:
-            cmd["claw_pos"] = CLAW_CLOSED
+        #TODO FIXME
 
         # 5) Linear arm extension: right stick Y (manual)
-        ext = apply_deadzone(s["right_stick_y"])
-        cmd["arm_extend_power"] = clamp(ext)
+        #TODO FIXME
 
         # 6) Climb presets: left/center/right buttons
-        if s["button_left"]:
-            cmd["climb_pos"] = CLIMB_STOW
-        if s["button_center"]:
-            cmd["climb_pos"] = CLIMB_HOOK
-        if s["button_right"]:
-            cmd["climb_pos"] = CLIMB_UP
+        #TODO FIXME
 
         # 7) Voltage device: left stick button as placeholder
-        cmd["voltage_device_on"] = s["left_stick_button"]
-
-        # 8) RPM wheel: right stick X → target
-        cmd["wheel_rpm_target"] = int((apply_deadzone(s["right_stick_x"]) + 1.0) * 0.5 * 65535)
+        #TODO FIXME
 
         self.robot_cmd = cmd
 
     def serial_loop(self):
-        period = 1.0 / UPDATE_HZ
         while not self.stop_event.is_set():
             with self.lock:
                 self.update_robot_command_from_controller()
-                cmd = self.robot_cmd.copy()
+                cmd = self.robot_cmd
 
             if self.serial and self.serial.is_open:
                 try:
@@ -264,7 +268,7 @@ class RobotClient:
                 except Exception as e:
                     print(f"[Robot] Serial write error: {e}")
 
-            time.sleep(period)
+            time.sleep(1.0 / UPDATE_HZ)
 
     def shutdown(self, *_):
         print("\n[Robot] Shutting down...")
@@ -280,7 +284,8 @@ class RobotClient:
         t = threading.Thread(target=self.serial_loop, daemon=True)
         t.start()
         signal.signal(signal.SIGINT, self.shutdown)
-        self.ws.run_forever(ping_interval=10, ping_timeout=5)
+        
+        self.ws.run_forever(ping_interval=1, ping_timeout=5)
 
 # ---------- Camera sender client ----------
 class CameraClient:
