@@ -6,7 +6,7 @@ import signal
 import pygame 
 
 # SERVER_URL = "ws://192.168.1.111:1909" #FIXME
-SERVER_URL = "ws://SHARPSHOOTER.local:1909" #FIXME
+SERVER_URL = "ws://127.0.0.1:1909" #FIXME
 SENDER_NAME = "1"
 DESTINATIONS = ["3"]
 
@@ -22,7 +22,8 @@ def send_addressed(ws, dest, payload):
     try:
         ws.send(json.dumps(msg))
     except Exception as e:
-        pass
+        #FIXME
+        print(e)
 
 # ----------------------------
 # Controller Client Class
@@ -36,6 +37,7 @@ class ControllerClient:
         time.sleep(0.5) # Keep the delay for server timing
         msg11 = {"id": 11, "connection_status": True}
         for dest in DESTINATIONS:
+            print(f"sent to: {dest}")
             send_addressed(ws, dest, msg11)
 
     def on_close(self, ws, close_status_code, close_msg):

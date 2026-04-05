@@ -14,7 +14,8 @@ import os
 # networking configuration
 # SERVER_URL = "ws://192.168.1.123:1909" # Lane's Pi 5?
 # SERVER_URL = "ws://192.168.1.74:1909" # STORM Pi 5
-SERVER_URL = "ws://SHARPSHOOTER.local:1909"
+# SERVER_URL = "ws://SHARPSHOOTER:1909"
+SERVER_URL = "ws://127.0.0.1:1909"
 
 ROBOT_SENDER      = "3"   # robot control sender id
 CONTROLLER_SENDER = "1"   # controller client id
@@ -187,7 +188,7 @@ class RobotClient:
 
         self.controller_state = ControllerState()
         self.robot_cmd = RobotCommand()
-        self.robot_state = RobotState.OFF #FIXME ???
+        self.robot_state = RobotState.TELEOP #FIXME only run tele-op for now while testing stuff
 
         #TODO FIXME have a callback to check FMS periodically? or like... idk man...
 
@@ -205,6 +206,14 @@ class RobotClient:
     # --- WebSocket callbacks ---
     def on_open(self, ws):
         print("[Robot] WS connected")
+
+        # send websocket message so the relay server knows where to find us
+        ws.send(json.dumps({
+            "sender": ROBOT_SENDER,
+            "destination": CONTROLLER_SENDER, #FIXME???
+            "data": "{}"
+        }))
+
         self.connected_ws = True
 
     def on_message(self, ws, raw):
@@ -220,7 +229,9 @@ class RobotClient:
 
             # update robot state
             if msg_id == 30 and msg.get("sender") == GUI_SENDER:
-                pass #TODO FIXME update robot state
+                with self.lock:
+                    self.robot_state = payload.get("state")
+                    #FIXME autonomous program selector
 
             # update controller state for robot control
             elif msg_id == 10 and msg.get("sender") == CONTROLLER_SENDER:
@@ -231,15 +242,15 @@ class RobotClient:
                     self.controller_state.right_stick_y = payload.get("right_stick_y")
                     self.controller_state.left_stick_button= payload.get("left_stick_button")
                     self.controller_state.right_stick_button= payload.get("right_stick_button")
-                    self.controller_state.button_a= payload.get("button_a")
-                    self.controller_state.button_b= payload.get("button_b")
-                    self.controller_state.button_x= payload.get("button_x")
-                    self.controller_state.button_y= payload.get("button_y")
-                    self.controller_state.left_bumper= payload.get("left_bumper")
-                    self.controller_state.right_bumper= payload.get("right_bumper")
-                    self.controller_state.dpad_top= payload.get("dpad_top")
-                    self.controller_state.dpad_bottom= payload.get("dpad_bottom")
-                    self.controller_state.dpad_left= payload.get("dpad_left")
+                    self.controller_state.button_a = payload.get("button_a")
+                    self.controller_state.button_b = payload.get("button_b")
+                    self.controller_state.button_x = payload.get("button_x")
+                    self.controller_state.button_y = payload.get("button_y")
+                    self.controller_state.left_bumper = payload.get("left_bumper")
+                    self.controller_state.right_bumper = payload.get("right_bumper")
+                    self.controller_state.dpad_top = payload.get("dpad_top")
+                    self.controller_state.dpad_bottom = payload.get("dpad_bottom")
+                    self.controller_state.dpad_left = payload.get("dpad_left")
                     self.controller_state.dpad_right= payload.get("dpad_right")
                     self.controller_state.trigger_left = payload.get("trigger_left")
                     self.controller_state.trigger_right = payload.get("trigger_right")
@@ -311,10 +322,11 @@ class RobotClient:
         else:
             cmd.arm_extend_motor = SLIDE_STOW_SPEED
 
-        # 6) Climb presets: left/center/right buttons
-        #TODO FIXME
+        # Climber retract/extend
+        #TODO
+        cmd.climb_motor_speed = 0.0
 
-        # 7) Voltage device: left stick button as placeholder
+        # Jumpstart voltage FIXME this just runs 100% of the time lol
         #TODO FIXME
 
         self.robot_cmd = cmd
@@ -322,8 +334,13 @@ class RobotClient:
     def serial_loop(self):
         while not self.stop_event.is_set():
             with self.lock:
-                self.update_robot_command_from_controller()
-                cmd = self.robot_cmd
+                if self.robot_state == RobotState.OFF:
+                    pass #FIXME send like, default command? or no command?
+                elif self.robot_state == RobotState.AUTONOMOUS:
+                    pass #FIXME need to figure out autonomous
+                elif self.robot_state == RobotState.TELEOP:
+                    self.update_robot_command_from_controller()
+                    cmd = self.robot_cmd
 
             if self.serial and self.serial.is_open:
                 try:
@@ -347,9 +364,10 @@ class RobotClient:
     def run(self):
         t = threading.Thread(target=self.serial_loop, daemon=True)
         t.start()
+        print(print(f"Starting robot code with ID: {t.native_id}"))
         signal.signal(signal.SIGINT, self.shutdown)
         
-        self.ws.run_forever(ping_interval=1, ping_timeout=5)
+        self.ws.run_forever(ping_interval=1, ping_timeout=0.5)
 
 
 # ---------- Main ----------
