@@ -10,17 +10,18 @@
 // To be included only in main(), .ino with setup() to avoid `Multiple Definitions` Linker Error
 #include "RPi_Pico_ISR_Timer.h"
 
+#include <Wire.h>
 
 #include <Adafruit_DS3502.h>
 
 Adafruit_DS3502 ds3502 = Adafruit_DS3502();
 
-#define pinSCL 5
-#define pinSDA 4
+#define pinSCL 3
+#define pinSDA 2
 
-#define pinRW 26
 
-#define pinADC 27
+
+#define pinADC 26
 
 // Init RPI_PICO_Timer
 RPI_PICO_Timer ITimer1(1);
@@ -72,12 +73,13 @@ void adjustVoltage() {
 
   switch (targetV) {
     case 2:
-      if (voltageOut <= 0.37) {
+      if (voltageOut <= 0.51) {
         currentWiper = currentWiper + 2;
         ds3502.setWiper(currentWiper);
+
       }
 
-      if (voltageOut >= 0.62) {
+      if (voltageOut >= 0.84) {
         currentWiper = currentWiper - 2;
         ds3502.setWiper(currentWiper);
       }
@@ -86,22 +88,22 @@ void adjustVoltage() {
 
     case 4:
       voltageOut = (analogRead(pinADC) / 1023.0 * 3.3);
-      if (voltageOut <= 0.87) {
+      if (voltageOut <= 1.18) {
         currentWiper = currentWiper + 2;
         ds3502.setWiper(currentWiper);
       }
 
-      if (voltageOut >= 1.12) {
+      if (voltageOut >= 1.52) {
         currentWiper = currentWiper - 2;
       }
       break;
     case 6:
       voltageOut = (analogRead(pinADC) / 1023.0 * 3.3);
-      if (voltageOut <= 1.36) {
+      if (voltageOut <= 1.86) {
         currentWiper = currentWiper + 2;
       }
 
-      if (voltageOut >= 1.61) {
+      if (voltageOut >= 2.2) {
         currentWiper = currentWiper - 2;
         ds3502.setWiper(currentWiper);
       }
@@ -109,11 +111,11 @@ void adjustVoltage() {
     case 8:
       // Baseline Voltage Ideal = 2.48V
       voltageOut = (analogRead(pinADC) / 1023.0 * 3.3);
-      if (voltageOut <= 1.86) {
+      if (voltageOut <= 2.53) {
         currentWiper = currentWiper + 2;
         ds3502.setWiper(currentWiper);
       }
-      if (voltageOut >= 2.11) {
+      if (voltageOut >= 2.87) {
         currentWiper = currentWiper - 2;
         ds3502.setWiper(currentWiper);
       }
@@ -121,22 +123,29 @@ void adjustVoltage() {
 
     case 10:
       voltageOut = (analogRead(pinADC) / 1023.0 * 3.3);
-      if (voltageOut <= 2.36) {
+      if (voltageOut <= 3.21) {
         currentWiper = currentWiper + 2;
-        if (currentWiper >= 127) {
-          currentWiper = 127;
-        }
         ds3502.setWiper(currentWiper);
       }
 
-      if (voltageOut >= 2.61) {
+      if (voltageOut >= 3.55) {
         currentWiper = currentWiper - 2;
       }
       break;
   }
-  Serial.print("Current Wiper ");
+
+  if (currentWiper <= 0) {
+    currentWiper = 0;
+    ds3502.setWiper(currentWiper);
+  }
+  if (currentWiper >= 127) {
+    currentWiper = 127;
+    ds3502.setWiper(currentWiper);
+  }
+
+  Serial.print("Current Wiper: ");
   Serial.println(currentWiper);
-  Serial.print("Read Voltage ");
+  Serial.print("Read Voltage: ");
   Serial.println(voltageOut);
 }
 
@@ -152,7 +161,12 @@ void setup() {
 
   Serial.println("Adafruit DS3502 Test");
 
-  if (!ds3502.begin()) {
+  Wire1.setSCL(pinSCL);
+  Wire1.setSDA(pinSDA);
+  Wire1.begin();
+  
+
+  if (!ds3502.begin(40, &Wire1)) {
     Serial.println("Couldn't find DS3502 chip");
     while (1)
       ;
