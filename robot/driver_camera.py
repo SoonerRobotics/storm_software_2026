@@ -8,8 +8,16 @@ import time
 import cv2
 import websocket
 
-from constants import constants
-from constants.constants import CAM_DESTINATION, CAM_SENDER, DRIVER_CAM_DEVICE_INDEX, SERVER_URL
+# SERVER_URL = "ws://192.168.1.123:1909" # Lane's Pi 5?
+# SERVER_URL = "ws://192.168.1.74:1909" # STORM Pi 5
+SERVER_URL = "ws://SHARPSHOOTER.local:1909"
+
+CAM_SENDER        = "3_cam"
+CAM_DESTINATION   = "4"   # UI / operator client id for video
+
+# non-process-specific camera constants
+DRIVER_CAM_DEVICE_INDEX = 0 # /dev/video0
+APRILTAG_CAM_DEVICE_INDEX = 1 # /dev/video1
 
 # Camera config
 CAM_WIDTH        = 640

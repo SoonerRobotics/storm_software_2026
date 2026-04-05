@@ -5,7 +5,8 @@ import threading
 import signal
 import pygame 
 
-SERVER_URL = "ws://192.168.1.111:1909"
+# SERVER_URL = "ws://192.168.1.111:1909" #FIXME
+SERVER_URL = "ws://SHARPSHOOTER.local:1909" #FIXME
 SENDER_NAME = "1"
 DESTINATIONS = ["3"]
 
@@ -155,6 +156,8 @@ class ControllerClient:
     # ----------------------------
     def shutdown_handler(self, sig, frame):
         print("\n[Controller] Shutting down...")
+
+        #FIXME this doesn't work with CTRL+C well, doesn't shut down ever
         self.stop_event.set()
         self.ws.close()
 

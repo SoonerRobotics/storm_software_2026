@@ -10,7 +10,16 @@ import serial
 import struct
 import os
 
-from constants.constants import APRILTAG_SENDER, CONTROLLER_SENDER, GUI_SENDER, ROBOT_SENDER, SERVER_URL
+
+# networking configuration
+# SERVER_URL = "ws://192.168.1.123:1909" # Lane's Pi 5?
+# SERVER_URL = "ws://192.168.1.74:1909" # STORM Pi 5
+SERVER_URL = "ws://SHARPSHOOTER.local:1909"
+
+ROBOT_SENDER      = "3"   # robot control sender id
+CONTROLLER_SENDER = "1"   # controller client id
+GUI_SENDER        = "4"   #FIXME not sure if this is right?
+APRILTAG_SENDER   = "3"   #FIXME?
 
 # Controller configuration
 DEADZONE   = 0.05
@@ -23,32 +32,32 @@ START_BYTE = b"$"
 END_BYTE = b"!"
 
 # ---------- Preset positions (0.0-1.0 normalized) ----------
-ARM_BASE_STOW  = 0.8
+ARM_BASE_STOW   = 0.8
 ARM_BASE_PICK   = 0.5
-ARM_BASE_LOW = 0.6
-ARM_BASE_HIGH = 0.7
+ARM_BASE_LOW    = 0.6
+ARM_BASE_HIGH   = 0.7
 
 WRIST_STOW   = 0.2
 WRIST_PICK   = 0.7
 WRIST_LEFT   = 0.5
-WRIST_RIGHT   = 0.5
+WRIST_RIGHT  = 0.5
 
 CLAW_OPEN    = 0.2
 CLAW_CLOSED  = 0.8
 
-SLIDE_EXTEND_SPEED = 0.1
-SLIDE_RETRACT_SPEED = -0.1
-SLIDE_STOW_SPEED = -0.05
+SLIDE_EXTEND_SPEED   = 0.1
+SLIDE_RETRACT_SPEED  = -0.1
+SLIDE_STOW_SPEED     = -0.05
 
-INTAKE_IN_SPEED = 0.5
-INTAKE_OUT_SPEED = -0.3
+INTAKE_IN_SPEED   = 0.5
+INTAKE_OUT_SPEED  = -0.3
 
 CLIMB_STOW   = 0.0
 CLIMB_HOOK   = 0.5
 CLIMB_UP     = 1.0
 
-MAX_DRIVE_SPEED = 1.0
-MAX_TURN_SPEED = 1.0
+MAX_DRIVE_SPEED  = 1.0
+MAX_TURN_SPEED   = 1.0
 
 # ---------- Helpers ----------
 def clamp(value, min_val=-1.0, max_val=1.0):

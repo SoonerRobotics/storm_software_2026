@@ -9,3 +9,5 @@
 **/videos
 
 AprilTagTesting/
+
+**/__pycache__
