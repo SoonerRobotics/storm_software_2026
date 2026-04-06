@@ -18,9 +18,10 @@
 #define SWITCH_1 18
 #define SWITCH_2 19
 
-const char MOTOR_FREQ = 50;
-char data[14];
+#define LED_PIN 25
 
+const int MOTOR_FREQ = 665;
+char data[14];
 
 void setup() {
   pinMode(SWITCH_1, INPUT);
@@ -41,6 +42,8 @@ void setup() {
   pinMode(CLAW_3_LARGE, OUTPUT);
   pinMode(JUMPSTART, OUTPUT);
 
+  pinMode(LED_PIN, OUTPUT);
+
   analogWriteFreq(MOTOR_FREQ);
   analogWriteResolution(8);
 
@@ -50,11 +53,12 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if (Serial.available() >= 14) {
-    Serial.readBytes(data, 14);
+  if (Serial.available() >= 13) {
+    digitalWrite(LED_PIN, HIGH);
+    Serial.readBytes(data, 13);
   }
 
-  if((data[0] == '$') && (data[13] == '!')) {
+  if((data[0] == '$') && (data[12] == '!')) {
     analogWrite(NW_DRV, data[1]);
     analogWrite(SW_DRV, data[2]);
     analogWrite(NE_DRV, data[3]);
@@ -65,7 +69,9 @@ void loop() {
     analogWrite(CLAW_2, data[8]);
     analogWrite(CLAW_1, data[9]);
     analogWrite(CLIMBER, data[10]);
-    analogWrite(CHARGE, data[11]);
+    // analogWrite(CHARGE, data[11]); // no charging wheel, in software packet this is actually jumpstart...
     // TODO JUMPSTART
+
+    digitalWrite(LED_PIN, LOW);
   }
 }
