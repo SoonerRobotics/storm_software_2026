@@ -17,7 +17,7 @@ constants = {}
 def clamp(value, min_val=-1.0, max_val=1.0):
     return max(min_val, min(max_val, value))
 
-def apply_deadzone(v, dz=constants["DEADZONE"]):
+def apply_deadzone(v, dz):
     return 0.0 if abs(v) < dz else v
 
 def normalize_wheels(wheels: List[float]) -> List[float]:
@@ -25,9 +25,9 @@ def normalize_wheels(wheels: List[float]) -> List[float]:
     return [w / m for w in wheels] if m > 1.0 else wheels
 
 def mecanum_blend(x: float, y: float, w: float) -> List[float]:
-    vx = clamp(apply_deadzone(x))      # forward/back
-    vy = clamp(apply_deadzone(y))      # strafe right-left
-    omega = clamp(apply_deadzone(w))   # turn
+    vx = clamp(apply_deadzone(x, constants["DEADZONE"]))      # forward/back
+    vy = clamp(apply_deadzone(y, constants["DEADZONE"]))      # strafe right-left
+    omega = clamp(apply_deadzone(w, constants["DEADZONE"]))   # turn
 
     fl = vx + vy + omega
     fr = vx - vy - omega
