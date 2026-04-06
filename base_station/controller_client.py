@@ -12,6 +12,18 @@ constants = {}
 # Controller Client Class
 # ----------------------------
 class ControllerClient:
+    def __init__(self, server_url):
+        self.ws = websocket.WebSocketApp(
+            server_url,
+            on_open=self.on_open,
+            on_close=self.on_close,
+            on_error=self.on_error
+        )
+        self.connected = False
+        self.lock = threading.Lock()
+        self.stop_event = threading.Event()
+        self.controller_state = self.default_state()
+        self.joystick = None 
 
     # >> WebSocket callbacks (Moved above __init__ to fix AttributeError) <<
     def on_open(self, ws):
@@ -40,19 +52,6 @@ class ControllerClient:
     def on_error(self, ws, error):
         print("[Controller] WebSocket error:", error)
         self.stop_event.set()
-
-    def __init__(self, server_url):
-        self.ws = websocket.WebSocketApp(
-            server_url,
-            on_open=self.on_open,
-            on_close=self.on_close,
-            on_error=self.on_error
-        )
-        self.connected = False
-        self.lock = threading.Lock()
-        self.stop_event = threading.Event()
-        self.controller_state = self.default_state()
-        self.joystick = None 
 
     def default_state(self):
         return {
@@ -84,9 +83,6 @@ class ControllerClient:
     # Controller input using Pygame
     # ----------------------------
     def read_gamepad_loop(self):
-        pygame.init()
-        pygame.joystick.init()
-
         if pygame.joystick.get_count() > 0:
             self.joystick = pygame.joystick.Joystick(0)
             self.joystick.init()
@@ -109,7 +105,8 @@ class ControllerClient:
                         s["right_stick_y"] = -self.joystick.get_axis(3) 
                         s["trigger_left"] = (self.joystick.get_axis(4) + 1) / 2 
                         s["trigger_right"] = (self.joystick.get_axis(5) + 1) / 2
-                    except IndexError: pass 
+                    except IndexError:
+                        pass 
 
                     # Get Button values (mapping varies by OS/Controller)
                     s["button_a"] = bool(self.joystick.get_button(0))
@@ -180,6 +177,9 @@ class ControllerClient:
 # Main
 # ----------------------------
 if __name__ == "__main__":
+    pygame.init()
+    pygame.joystick.init()
+
     with open("../constants.toml", "rb") as const_file:
         try:
             constants = tomllib.load(const_file)
@@ -190,7 +190,9 @@ if __name__ == "__main__":
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
-    client = ControllerClient(f"{url}:{port}")
+    # client = ControllerClient(f"{url}:{port}")
+    client = ControllerClient(f"ws://127.0.0.1:1909") #TODO FIXME is this supposed to be right?
+    # we need to figure out if relay server is running on robot or on base station
     signal.signal(signal.SIGINT, client.shutdown_handler)
     try:
         client.run()
