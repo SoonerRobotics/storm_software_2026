@@ -40,9 +40,9 @@ def mecanum_blend(x: float, y: float, w: float) -> List[float]:
 def scale_motor_speed(speed: float) -> int:
     return int(127 * speed) + 127
 
-# needs to be between 0 and 255. assumes pos is degrees. FIXME do we even need this?
-# def normalize_servo_pos(pos: int) -> float:
-#     return float(pos / 360.0)
+# needs to be between 0 and 255. assumes pos is degrees.
+def scale_servo_pos(pos: float) -> int:
+     return int(pos * 255) #FIXME do I need a 360 or 2pi somewhere in here???
 
 
 #FIXME are these good default values?
@@ -108,20 +108,20 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
     # so no COMMAND bytes, but keeping the start and end bytes
 
     #FIXME is it supposed to be little or big endian?
-    msg = struct.pack(">c14Bc",
-                      constants["START_BYTE"],
+    msg = struct.pack(">c11Bc",
+                      bytes(constants["START_BYTE"], 'ascii'),
                       scale_motor_speed(cmd.left_front_drive_motor),
                       scale_motor_speed(cmd.left_back_drive_motor),
                       scale_motor_speed(cmd.right_front_drive_motor),
                       scale_motor_speed(cmd.right_back_drive_motor),
                       scale_motor_speed(cmd.arm_extend_motor),
                       scale_motor_speed(cmd.intake_motor),
-                      cmd.arm_servo_pos,
-                      cmd.wrist_servo_pos,
-                      cmd.claw_servo_pos,
+                      scale_servo_pos(cmd.arm_servo_pos),
+                      scale_servo_pos(cmd.wrist_servo_pos),
+                      scale_servo_pos(cmd.claw_servo_pos),
                       scale_motor_speed(cmd.climb_motor_speed),
                       cmd.jumpstart_voltage,
-                      constants["END_BYTE"])
+                      bytes(constants["END_BYTE"], 'ascii'))
     return msg
 
 # ---------- Robot control client ----------
@@ -173,7 +173,7 @@ class RobotClient:
     def on_message(self, ws, raw):
         try:
             msg = json.loads(raw)
-            if msg.get("destination") != constants["ROBOT_SENDER"]:
+            if msg.get("destination") != constants["ROBOT_NAME"]:
                 return
             
             payload = json.loads(msg["data"])
