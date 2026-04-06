@@ -53,8 +53,8 @@ class CameraClient:
         }
 
         envelope = {
-            "sender": constants["CAM_SENDER"],
-            "destination": constants["CAM_DESTINATION"],
+            "sender": constants["DRIVER_CAMERA_NAME"],
+            "destination": constants["GUI_NAME"],
             "data": json.dumps(payload)
         }
 

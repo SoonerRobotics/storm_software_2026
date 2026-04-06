@@ -21,8 +21,8 @@ class ControllerClient:
         msg11 = {"id": 11, "connection_status": True}
         
         msg = {
-            "sender": constants["SENDER_NAME"],
-            "destination": constants[""],
+            "sender": constants["CONTROLLER_INPUT_NAME"],
+            "destination": constants["ROBOT_NAME"],
             "data": json.dumps(msg11)
         }
 
@@ -143,8 +143,8 @@ class ControllerClient:
                     msg10 = self.controller_state.copy()
                     
                     msg = {
-                        "sender": constants["SENDER_NAME"],
-                        "destination": constants[""],
+                        "sender": constants["CONTROLLER_INPUT_NAME"],
+                        "destination": constants["ROBOT_NAME"],
                         "data": json.dumps(msg10)
                     }
 

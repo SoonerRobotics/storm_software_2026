@@ -163,8 +163,8 @@ class RobotClient:
 
         # send websocket message so the relay server knows where to find us
         ws.send(json.dumps({
-            "sender": constants["ROBOT_SENDER"],
-            "destination": constants["CONTROLLER_SENDER"], #FIXME???
+            "sender": constants["ROBOT_NAME"],
+            "destination": constants["CONTROLLER_INPUT_NAME"], #FIXME???
             "data": "{}"
         }))
 
@@ -182,13 +182,13 @@ class RobotClient:
             #TODO FIXME separate one for autonomous???
 
             # update robot state
-            if msg_id == 30 and msg.get("sender") == constants["GUI_SENDER"]:
+            if msg_id == 30 and msg.get("sender") == constants["GUI_NAME"]:
                 with self.lock:
                     self.robot_state = payload.get("state")
                     #FIXME autonomous program selector
 
             # update controller state for robot control
-            elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_SENDER"]:
+            elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
                 with self.lock:
                     self.controller_state.left_stick_x = payload.get("left_stick_x")
                     self.controller_state.left_stick_y = payload.get("left_stick_y")
@@ -210,7 +210,7 @@ class RobotClient:
                     self.controller_state.trigger_right = payload.get("trigger_right")
             
             # update robot position/alignment from AprilTag process
-            elif msg_id == 141 and msg.get("sender") == constants["APRILTAG_SENDER"]:
+            elif msg_id == 141 and msg.get("sender") == constants["APRILTAG_NAME"]:
                 pass #TODO
 
         except Exception as e:
