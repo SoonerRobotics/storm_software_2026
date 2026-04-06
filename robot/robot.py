@@ -55,10 +55,10 @@ class RobotCommand:
 
     intake_motor: float = 0.0
 
-    arm_servo_pos: float = constants["ARM_BASE_STOW"]
+    arm_servo_pos: float = 0.0
     arm_extend_motor: float = 0.0
-    wrist_servo_pos: float = constants["WRIST_STOW"]
-    claw_servo_pos: float = constants["CLAW_CLOSED"]
+    wrist_servo_pos: float = 0.0
+    claw_servo_pos: float = 0.0
     
     climb_motor_speed: float = 0.0
 
@@ -126,7 +126,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
 
 # ---------- Robot control client ----------
 class RobotClient:
-    def __init__(self, server_url):
+    def __init__(self, server_url, default_command: RobotCommand):
         self.ws = websocket.WebSocketApp(
             server_url,
             on_open=self.on_open,
@@ -140,7 +140,8 @@ class RobotClient:
         self.stop_event = threading.Event()
 
         self.controller_state = ControllerState()
-        self.robot_cmd = RobotCommand()
+        self.default_command = default_command
+        self.robot_cmd = default_command
         self.robot_state = RobotState.TELEOP #FIXME only run tele-op for now while testing stuff
 
         #TODO FIXME have a callback to check FMS periodically? or like... idk man...
@@ -337,10 +338,16 @@ if __name__ == "__main__":
             print("[Robot] Failed to read constants file")
             raise SystemExit
 
+    # have to update this after reading the constants file
+    default_robot_command = RobotCommand()
+    default_robot_command.arm_servo_pos = constants["ARM_BASE_STOW"]
+    default_robot_command.wrist_servo_pos = constants["WRIST_STOW"]
+    default_robot_command.claw_servo_pos = constants["CLAW_CLOSED"]
+
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
-    robot = RobotClient(f"{url}:{port}")
+    robot = RobotClient(f"{url}:{port}", default_robot_command)
 
     try:
         robot.run()
