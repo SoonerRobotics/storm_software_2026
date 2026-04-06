@@ -15,7 +15,8 @@ APRILTAG_NAME = "apriltag"
 DRIVER_CAMERA_NAME = "driver_cam"
 CONTROLLER_INPUT_NAME = "controller"
 GUI_NAME = "gui"
-
+STATISTICS_NAME = "statistics"
+LOGGING_NAME = "logger"
 
 
 # --- Robot constants ---

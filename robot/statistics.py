@@ -1,18 +1,23 @@
+# successor to autonav_statistics
+# if this doesn't give meaningful data then we can just not run it
 
-
-# ---------- Camera sender client ----------
-import base64
-import json
+from dataclasses import dataclass
 import threading
-import time
-import cv2
+from typing import List
 import websocket
+import psutil
 import tomllib
+import json
 
 constants = {}
 
+@dataclass
+class StatisticsMessage:
+    cpu_percent: List[float] = [0.0]
+    ram_percent: float = 0.0
+    cpu_temperature: float = 0.0
 
-class CameraClient:
+class StatisticsClient:
     def __init__(self, server_url):
         self.server_url = server_url
         self.ws = None
@@ -30,30 +35,30 @@ class CameraClient:
         t.start()
 
     def on_open(self, ws):
-        print("[Camera] WS connected")
+        print("[Statistics] WS connected")
         self.connected = True
 
     def on_close(self, ws, code, reason):
-        print("[Camera] WS closed:", code, reason)
+        print("[Statistics] WS closed:", code, reason)
         self.connected = False
         self.stop_event.set()
 
     def on_error(self, ws, error):
-        print("[Camera] WS error:", error)
+        print("[Statistics] WS error:", error)
 
-    def send_frame(self, jpg_bytes):
+    def send_msg(self):
         if not self.connected:
             return
-        # base64-encode JPEG for easier handling on the UI side
-        b64 = base64.b64encode(jpg_bytes).decode("ascii")
+        
         payload = {
-            "id": 20, #FIXME this should be 131
-            "ts": time.time(),
-            "frame_b64": b64
+            "id": 170,
+            "cpu_percent": psutil.cpu_percent(),
+            "ram_percent": psutil.virtual_memory(),
+            "cpu_temperature": psutil.sensors_temperatures()
         }
 
         envelope = {
-            "sender": constants["DRIVER_CAMERA_NAME"],
+            "sender": constants["STATISTICS_NAME"],
             "destination": constants["GUI_NAME"],
             "data": json.dumps(payload)
         }
@@ -62,7 +67,7 @@ class CameraClient:
             try:
                 self.ws.send(json.dumps(envelope))
             except Exception as e:
-                print(f"[Camera] send error: {e}")
+                print(f"[Statistics] send error: {e}")
 
     def shutdown(self):
         self.stop_event.set()
@@ -72,35 +77,6 @@ class CameraClient:
                 self.ws.close()
             except:
                 pass
-
-def camera_loop(cam_client: CameraClient):
-    cap = cv2.VideoCapture(constants["DRIVER_CAM_DEVICE_INDEX"])
-    if not cap.isOpened():
-        print("[Camera] Failed to open camera")
-        return
-
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, constants["CAM_WIDTH"])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, constants["CAM_HEIGHT"])
-    cap.set(cv2.CAP_PROP_FPS, constants["CAM_FPS"])
-
-    period = 1.0 / constants["CAM_FPS"]
-    while not cam_client.stop_event.is_set():
-        ret, frame = cap.read()
-        if not ret:
-            time.sleep(0.1)
-            continue
-
-        # Optional: downscale / compress more
-        # frame = cv2.resize(frame, (CAM_WIDTH, CAM_HEIGHT))
-
-        ok, jpg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
-        if ok:
-            cam_client.send_frame(jpg.tobytes())
-
-        time.sleep(period)
-
-    cap.release()
-    print("[Camera] Loop ended")
 
 def main():
     with open("../constants.toml", "rb") as const_file:
@@ -113,13 +89,14 @@ def main():
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
-    cam_client = CameraClient(f"{url}:{port}")
+    statistics = StatisticsClient(f"{url}:{port}")
 
     # Start camera WS connection & loop
-    cam_client.connect()
-    cam_thread = threading.Thread(target=camera_loop, args=(cam_client,), daemon=True)
+    statistics.connect()
+    #FIXME need to make some sort of callback or something? idk look at the serial code in robot.py maybe
+    cam_thread = threading.Thread(target=statistics_loop, args=(statistics,), daemon=True)
     cam_thread.start()
-    cam_client.shutdown()
+    statistics.shutdown()
 
 if __name__ == "__main__":
     main()
