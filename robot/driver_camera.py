@@ -7,22 +7,10 @@ import threading
 import time
 import cv2
 import websocket
+import tomllib
 
-# SERVER_URL = "ws://192.168.1.123:1909" # Lane's Pi 5?
-# SERVER_URL = "ws://192.168.1.74:1909" # STORM Pi 5
-SERVER_URL = "ws://SHARPSHOOTER.local:1909"
+constants = {}
 
-CAM_SENDER        = "3_cam"
-CAM_DESTINATION   = "4"   # UI / operator client id for video
-
-# non-process-specific camera constants
-DRIVER_CAM_DEVICE_INDEX = 0 # /dev/video0
-APRILTAG_CAM_DEVICE_INDEX = 1 # /dev/video1
-
-# Camera config
-CAM_WIDTH        = 640
-CAM_HEIGHT       = 360
-CAM_FPS          = 10.0       # desired send rate
 
 class CameraClient:
     def __init__(self, server_url):
@@ -63,34 +51,39 @@ class CameraClient:
             "ts": time.time(),
             "frame_b64": b64
         }
+
         envelope = {
-            "sender": CAM_SENDER,
-            "destination": CAM_DESTINATION,
+            "sender": constants["CAM_SENDER"],
+            "destination": constants["CAM_DESTINATION"],
             "data": json.dumps(payload)
         }
-        try:
-            self.ws.send(json.dumps(envelope))
-        except Exception as e:
-            print(f"[Camera] send error: {e}")
+
+        if self.ws is not None:
+            try:
+                self.ws.send(json.dumps(envelope))
+            except Exception as e:
+                print(f"[Camera] send error: {e}")
 
     def shutdown(self):
         self.stop_event.set()
-        try:
-            self.ws.close()
-        except:
-            pass
+    
+        if self.ws is not None:
+            try:
+                self.ws.close()
+            except:
+                pass
 
 def camera_loop(cam_client: CameraClient):
-    cap = cv2.VideoCapture(DRIVER_CAM_DEVICE_INDEX)
+    cap = cv2.VideoCapture(constants["DRIVER_CAM_DEVICE_INDEX"])
     if not cap.isOpened():
         print("[Camera] Failed to open camera")
         return
 
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
-    cap.set(cv2.CAP_PROP_FPS, CAM_FPS)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, constants["CAM_WIDTH"])
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, constants["CAM_HEIGHT"])
+    cap.set(cv2.CAP_PROP_FPS, constants["CAM_FPS"])
 
-    period = 1.0 / CAM_FPS
+    period = 1.0 / constants["CAM_FPS"]
     while not cam_client.stop_event.is_set():
         ret, frame = cap.read()
         if not ret:
@@ -110,7 +103,17 @@ def camera_loop(cam_client: CameraClient):
     print("[Camera] Loop ended")
 
 def main():
-    cam_client = CameraClient(SERVER_URL)
+    with open("../constants.toml", "rb") as const_file:
+        try:
+            constants = tomllib.load(const_file)
+        except Exception as e:
+            print("[Robot] Failed to read constants file")
+            raise SystemExit
+    
+    url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
+    port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
+
+    cam_client = CameraClient(f"{url}:{port}")
 
     # Start camera WS connection & loop
     cam_client.connect()

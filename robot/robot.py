@@ -9,62 +9,15 @@ import signal
 import serial
 import struct
 import os
+import tomllib
 
-
-# networking configuration
-# SERVER_URL = "ws://192.168.1.123:1909" # Lane's Pi 5?
-# SERVER_URL = "ws://192.168.1.74:1909" # STORM Pi 5
-# SERVER_URL = "ws://SHARPSHOOTER:1909"
-SERVER_URL = "ws://127.0.0.1:1909"
-
-ROBOT_SENDER      = "3"   # robot control sender id
-CONTROLLER_SENDER = "1"   # controller client id
-GUI_SENDER        = "4"   #FIXME not sure if this is right?
-APRILTAG_SENDER   = "3"   #FIXME?
-
-# Controller configuration
-DEADZONE   = 0.05
-UPDATE_HZ   = 50.0
-
-# Pico 2 (PCB/electrical) config
-SERIAL_PORT = "/dev/ttyACM0"
-BAUD_RATE   = 115200
-START_BYTE = b"$"
-END_BYTE = b"!"
-
-# ---------- Preset positions (0.0-1.0 normalized) ----------
-ARM_BASE_STOW   = 0.8
-ARM_BASE_PICK   = 0.5
-ARM_BASE_LOW    = 0.6
-ARM_BASE_HIGH   = 0.7
-
-WRIST_STOW   = 0.2
-WRIST_PICK   = 0.7
-WRIST_LEFT   = 0.5
-WRIST_RIGHT  = 0.5
-
-CLAW_OPEN    = 0.2
-CLAW_CLOSED  = 0.8
-
-SLIDE_EXTEND_SPEED   = 0.1
-SLIDE_RETRACT_SPEED  = -0.1
-SLIDE_STOW_SPEED     = -0.05
-
-INTAKE_IN_SPEED   = 0.5
-INTAKE_OUT_SPEED  = -0.3
-
-CLIMB_STOW   = 0.0
-CLIMB_HOOK   = 0.5
-CLIMB_UP     = 1.0
-
-MAX_DRIVE_SPEED  = 1.0
-MAX_TURN_SPEED   = 1.0
+constants = {}
 
 # ---------- Helpers ----------
 def clamp(value, min_val=-1.0, max_val=1.0):
     return max(min_val, min(max_val, value))
 
-def apply_deadzone(v, dz=DEADZONE):
+def apply_deadzone(v, dz=constants["DEADZONE"]):
     return 0.0 if abs(v) < dz else v
 
 def normalize_wheels(wheels: List[float]) -> List[float]:
@@ -102,10 +55,10 @@ class RobotCommand:
 
     intake_motor: float = 0.0
 
-    arm_servo_pos: float = ARM_BASE_STOW
+    arm_servo_pos: float = constants["ARM_BASE_STOW"]
     arm_extend_motor: float = 0.0
-    wrist_servo_pos: float = WRIST_STOW
-    claw_servo_pos: float = CLAW_CLOSED
+    wrist_servo_pos: float = constants["WRIST_STOW"]
+    claw_servo_pos: float = constants["CLAW_CLOSED"]
     
     climb_motor_speed: float = 0.0
 
@@ -156,7 +109,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
 
     #FIXME is it supposed to be little or big endian?
     msg = struct.pack(">c14Bc",
-                      START_BYTE,
+                      constants["START_BYTE"],
                       scale_motor_speed(cmd.left_front_drive_motor),
                       scale_motor_speed(cmd.left_back_drive_motor),
                       scale_motor_speed(cmd.right_front_drive_motor),
@@ -168,7 +121,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
                       cmd.claw_servo_pos,
                       scale_motor_speed(cmd.climb_motor_speed),
                       cmd.jumpstart_voltage,
-                      END_BYTE)
+                      constants["END_BYTE"])
     return msg
 
 # ---------- Robot control client ----------
@@ -197,8 +150,8 @@ class RobotClient:
 
     def try_open_serial(self):
         try:
-            self.serial = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.5)
-            print(f"[Robot] Serial connected on {SERIAL_PORT}")
+            self.serial = serial.Serial(constants["SERIAL_PORT"], constants["BAUD_RATE"], timeout=0.5)
+            print(f"[Robot] Serial connected on {constants["SERIAL_PORT"]}")
         except Exception as e:
             self.serial = None
             print(f"[Robot] Serial open failed: {e}")
@@ -209,8 +162,8 @@ class RobotClient:
 
         # send websocket message so the relay server knows where to find us
         ws.send(json.dumps({
-            "sender": ROBOT_SENDER,
-            "destination": CONTROLLER_SENDER, #FIXME???
+            "sender": constants["ROBOT_SENDER"],
+            "destination": constants["CONTROLLER_SENDER"], #FIXME???
             "data": "{}"
         }))
 
@@ -219,7 +172,7 @@ class RobotClient:
     def on_message(self, ws, raw):
         try:
             msg = json.loads(raw)
-            if msg.get("destination") != ROBOT_SENDER:
+            if msg.get("destination") != constants["ROBOT_SENDER"]:
                 return
             
             payload = json.loads(msg["data"])
@@ -228,13 +181,13 @@ class RobotClient:
             #TODO FIXME separate one for autonomous???
 
             # update robot state
-            if msg_id == 30 and msg.get("sender") == GUI_SENDER:
+            if msg_id == 30 and msg.get("sender") == constants["GUI_SENDER"]:
                 with self.lock:
                     self.robot_state = payload.get("state")
                     #FIXME autonomous program selector
 
             # update controller state for robot control
-            elif msg_id == 10 and msg.get("sender") == CONTROLLER_SENDER:
+            elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_SENDER"]:
                 with self.lock:
                     self.controller_state.left_stick_x = payload.get("left_stick_x")
                     self.controller_state.left_stick_y = payload.get("left_stick_y")
@@ -256,7 +209,7 @@ class RobotClient:
                     self.controller_state.trigger_right = payload.get("trigger_right")
             
             # update robot position/alignment from AprilTag process
-            elif msg_id == 141 and msg.get("sender") == APRILTAG_SENDER:
+            elif msg_id == 141 and msg.get("sender") == constants["APRILTAG_SENDER"]:
                 pass #TODO
 
         except Exception as e:
@@ -286,41 +239,41 @@ class RobotClient:
 
         # Intake: right bumper in, left bumper out
         if s.right_bumper:
-            cmd.intake_motor = INTAKE_IN_SPEED
+            cmd.intake_motor = constants["INTAKE_IN_SPEED"]
         elif s.left_bumper:
-            cmd.intake_motor = INTAKE_OUT_SPEED
+            cmd.intake_motor = constants["INTAKE_OUT_SPEED"]
         else:
             cmd.intake_motor = 0.0
 
         # Arm: score high/low, grab battery, stow        
         if s.dpad_top:
-            cmd.arm_servo_pos = ARM_BASE_HIGH
+            cmd.arm_servo_pos = constants["ARM_BASE_HIGH"]
         elif s.dpad_bottom:
-            cmd.arm_servo_pos = ARM_BASE_LOW
+            cmd.arm_servo_pos = constants["ARM_BASE_LOW"]
         else:
             pass #TODO FIXME?
 
         # Wrist: score left/right, grab battery
         if s.dpad_left:
-            cmd.wrist_servo_pos = WRIST_LEFT
+            cmd.wrist_servo_pos = constants["WRIST_LEFT"]
         elif s.dpad_right:
-            cmd.wrist_servo_pos = WRIST_RIGHT
+            cmd.wrist_servo_pos = constants["WRIST_RIGHT"]
         else: #FIXME this is bad idea
-            cmd.wrist_servo_pos = WRIST_PICK
+            cmd.wrist_servo_pos = constants["WRIST_PICK"]
 
         # Claw: open/close
         if s.button_y:
-            cmd.claw_servo_pos = CLAW_OPEN # release battery
+            cmd.claw_servo_pos = constants["CLAW_OPEN"] # release battery
         elif s.button_a:
-            cmd.claw_servo_pos = CLAW_CLOSED #TODO FIXME do we have to continuously keep this or will it stay if we only set it once (pico firmware?)
+            cmd.claw_servo_pos = constants["CLAW_CLOSED"] #TODO FIXME do we have to continuously keep this or will it stay if we only set it once (pico firmware?)
 
         # Linear arm extension
         if s.button_x:
-            cmd.arm_extend_motor = SLIDE_RETRACT_SPEED
+            cmd.arm_extend_motor = constants["SLIDE_RETRACT_SPEED"]
         elif s.button_b:
-            cmd.arm_extend_motor = SLIDE_EXTEND_SPEED
+            cmd.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
         else:
-            cmd.arm_extend_motor = SLIDE_STOW_SPEED
+            cmd.arm_extend_motor = constants["SLIDE_STOW_SPEED"]
 
         # Climber retract/extend
         #TODO
@@ -333,6 +286,8 @@ class RobotClient:
 
     def serial_loop(self):
         while not self.stop_event.is_set():
+            cmd = RobotCommand()
+            
             with self.lock:
                 if self.robot_state == RobotState.OFF:
                     pass #FIXME send like, default command? or no command?
@@ -349,7 +304,7 @@ class RobotClient:
                 except Exception as e:
                     print(f"[Robot] Serial write error: {e}")
 
-            time.sleep(1.0 / UPDATE_HZ)
+            time.sleep(1.0 / constants["UPDATE_HZ"])
 
     def shutdown(self, *_):
         print("\n[Robot] Shutting down...")
@@ -375,7 +330,17 @@ if __name__ == "__main__":
     if os.geteuid() != 0:
         print("Tip: for serial, add your user to 'dialout' or run with sudo.")
 
-    robot = RobotClient(SERVER_URL)
+    with open("../constants.toml", "rb") as const_file:
+        try:
+            constants = tomllib.load(const_file)
+        except Exception as e:
+            print("[Robot] Failed to read constants file")
+            raise SystemExit
+
+    url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
+    port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
+
+    robot = RobotClient(f"{url}:{port}")
 
     try:
         robot.run()

@@ -3,27 +3,10 @@ import time
 import websocket
 import threading
 import signal
-import pygame 
+import pygame
+import tomllib
 
-# SERVER_URL = "ws://192.168.1.111:1909" #FIXME
-SERVER_URL = "ws://127.0.0.1:1909" #FIXME
-SENDER_NAME = "1"
-DESTINATIONS = ["3"]
-
-# ----------------------------
-# Functions to send messages
-# ----------------------------
-def send_addressed(ws, dest, payload):
-    msg = {
-        "sender": SENDER_NAME,
-        "destination": dest,
-        "data": json.dumps(payload)
-    }
-    try:
-        ws.send(json.dumps(msg))
-    except Exception as e:
-        #FIXME
-        print(e)
+constants = {}
 
 # ----------------------------
 # Controller Client Class
@@ -36,9 +19,18 @@ class ControllerClient:
         self.connected = True
         time.sleep(0.5) # Keep the delay for server timing
         msg11 = {"id": 11, "connection_status": True}
-        for dest in DESTINATIONS:
-            print(f"sent to: {dest}")
-            send_addressed(ws, dest, msg11)
+        
+        msg = {
+            "sender": constants["SENDER_NAME"],
+            "destination": constants[""],
+            "data": json.dumps(msg11)
+        }
+
+        try:
+            ws.send(json.dumps(msg))
+        except Exception as e:
+            #FIXME
+            print(e)
 
     def on_close(self, ws, close_status_code, close_msg):
         print("[Controller] Disconnected from server")
@@ -149,8 +141,19 @@ class ControllerClient:
             if self.connected:
                 with self.lock:
                     msg10 = self.controller_state.copy()
-                    for dest in DESTINATIONS:
-                        send_addressed(self.ws, dest, msg10)
+                    
+                    msg = {
+                        "sender": constants["SENDER_NAME"],
+                        "destination": constants[""],
+                        "data": json.dumps(msg10)
+                    }
+
+                    try:
+                        self.ws.send(json.dumps(msg))
+                    except Exception as e:
+                        #FIXME
+                        print(e)
+
             time.sleep(0.02) # 50 Hz
 
     # ----------------------------
@@ -177,7 +180,17 @@ class ControllerClient:
 # Main
 # ----------------------------
 if __name__ == "__main__":
-    client = ControllerClient(SERVER_URL)
+    with open("../constants.toml", "rb") as const_file:
+        try:
+            constants = tomllib.load(const_file)
+        except Exception as e:
+            print("[Robot] Failed to read constants file")
+            raise SystemExit
+    
+    url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
+    port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
+
+    client = ControllerClient(f"{url}:{port}")
     signal.signal(signal.SIGINT, client.shutdown_handler)
     try:
         client.run()

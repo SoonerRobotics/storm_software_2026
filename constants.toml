@@ -1,0 +1,74 @@
+COMPETITION = false
+
+# --- Networking constants ---
+COMPETITION_SERVER_URL = "ws://192.168.1.74" # where the relay_server executable is running (normally robot? base station? TODO)
+COMPETITION_SERVER_PORT = 1909 # this cannot change so easily, as it is hard-coded in ws_server/relay_server.cpp
+
+# for debugging/testing
+LOCAL_SERVER_URL = "ws://127.0.0.1"
+LOCAL_SERVER_PORT = 1909
+
+# sort of like ROS topic names used by the relay_server to identify who to send messages to
+ROBOT_NAME = "robot"
+APRILTAG_NAME = "apriltag"
+DRIVER_CAMERA_NAME = "driver_cam"
+CONTROLLER_INPUT_NAME = "controller"
+GUI_NAME = "gui"
+
+
+
+# --- Robot constants ---
+# serial communication
+SERIAL_PORT = "/dev/ttyACM0"
+BAUD_RATE   = 115200
+START_BYTE = "$" # binary string
+END_BYTE = "!" # binary string
+
+
+# preset positions/speeds
+# STOW = starting configuration, also driving around position
+ARM_BASE_STOW = 0.8
+ARM_BASE_PICK = 0.5
+ARM_BASE_LOW = 0.6
+ARM_BASE_HIGH = 0.7
+
+WRIST_STOW = 0.2
+WRIST_PICK = 0.7
+WRIST_LEFT = 0.5
+WRIST_RIGHT = 0.5
+
+CLAW_OPEN = 0.2
+CLAW_CLOSED = 0.8
+
+# linear slide speeds
+SLIDE_EXTEND_SPEED = 0.1
+SLIDE_RETRACT_SPEED = -0.1
+SLIDE_STOW_SPEED = -0.05 # stow speed is not 0 because the motor needs to apply constant torque to kep in position
+
+# intake speed (intake off speed is 0.0, naturally)
+INTAKE_IN_SPEED = 0.5
+INTAKE_OUT_SPEED = -0.3
+
+# climber speeds
+CLIMB_STOW = 0.0
+CLIMB_HOOK = 0.5
+CLIMB_UP = 1.0
+
+# absolute maximum, scale of 0-1
+MAX_DRIVE_SPEED = 1.0
+MAX_TURN_SPEED = 1.0
+
+
+# cameras
+DRIVER_CAM_DEVICE_INDEX = 0 # /dev/video0
+APRILTAG_CAM_DEVICE_INDEX = 1 # /dev/video1
+CAM_WIDTH = 640
+CAM_HEIGHT = 360
+CAM_FPS = 10.0       # desired send rate
+
+
+
+# --- Base-station constants ---
+# controller input
+DEADZONE = 0.05 # on a scale of 0.0 to 1.0
+UPDATE_HZ = 50.0 # = 20ms
