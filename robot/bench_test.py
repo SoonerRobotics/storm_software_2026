@@ -1,20 +1,21 @@
 # this file is meant to run from your computer, plugged directly into the Pico 2
 # essentially acting as the robot and base station all in one
 
-import pygame
+# import pygame
 import struct
 import serial
+import time
 
 def main():
     # init pygame
-    pygame.init()
+    # pygame.init()
 
     # open serial
     pico = serial.Serial("/dev/ttyACM0", 115200, timeout=0.5)
 
     # connect joystick
-    joystick = pygame.joystick.Joystick(0)
-    timer = pygame.time.Clock()
+    # joystick = pygame.joystick.Joystick(0)
+    # timer = pygame.time.Clock()
 
     # pygame events loop FIXME
     # for event in pygame.event.get():
@@ -48,7 +49,7 @@ def main():
             pico.write(msg)
 
             # don't overload
-            timer.tick(50)
+            time.sleep(1 / 50.0)
     finally:    
         # close serial
         pico.close()
