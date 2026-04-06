@@ -20,7 +20,7 @@
 
 #define LED_PIN 25
 
-const int MOTOR_FREQ = 665;
+const int MOTOR_FREQ = 300;
 char data[14];
 
 void setup() {

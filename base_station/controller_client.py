@@ -5,6 +5,7 @@ import threading
 import signal
 import pygame
 import tomllib
+import os
 
 constants = {}
 
@@ -48,6 +49,7 @@ class ControllerClient:
         print("[Controller] Disconnected from server")
         self.connected = False
         self.stop_event.set()
+        pygame.quit()
 
     def on_error(self, ws, error):
         print("[Controller] WebSocket error:", error)
@@ -92,7 +94,8 @@ class ControllerClient:
             self.stop_event.set() # Stop the script if no controller
 
         while not self.stop_event.is_set():
-            pygame.event.pump() 
+            pygame.event.pump()
+            # pygame.display.flip()
 
             if self.joystick:
                 with self.lock:
@@ -115,10 +118,11 @@ class ControllerClient:
                     s["button_y"] = bool(self.joystick.get_button(2))
                     s["button_left_bumper"] = bool(self.joystick.get_button(4))
                     s["button_right_bumper"] = bool(self.joystick.get_button(5))
-                    s["button_center"] = bool(self.joystick.get_button(11)) # Common mapping for center/mode
+                    # s["button_center"] = bool(self.joystick.get_button(11)) # Common mapping for center/mode
+                    s["button_center"] = False
                     s["button_left"] = bool(self.joystick.get_button(8))   # Common mapping for select
                     s["button_right"] = bool(self.joystick.get_button(9))  # Common mapping for start
-                    s["left_stick_button"] = bool(self.joystick.get_button(12))
+                    s["left_stick_button"] = False #bool(self.joystick.get_button(12))
                     s["right_stick_button"] = bool(self.joystick.get_button(10))
 
                     # Get DPad values (Hat/POV)
@@ -147,6 +151,8 @@ class ControllerClient:
 
                     try:
                         self.ws.send(json.dumps(msg))
+
+                        # print(msg10)
                     except Exception as e:
                         #FIXME
                         print(e)
@@ -177,8 +183,15 @@ class ControllerClient:
 # Main
 # ----------------------------
 if __name__ == "__main__":
+    os.environ['SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS'] = "1" # necessary to process background events
+    os.environ['SDL_JOYSTICK_RAWINPUT'] = "0" # necessary for bluetooth xbox controller to work
+    os.environ['SDL_HINT_JOYSTICK_THREAD'] = "1" # necessary for xbox controller to not act like a mouse maybe?
+
     pygame.init()
     pygame.joystick.init()
+
+    # window = pygame.display.set_mode([400, 400])
+    # window.fill((0, 0, 0))
 
     with open("../constants.toml", "rb") as const_file:
         try:
