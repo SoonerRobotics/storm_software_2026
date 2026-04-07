@@ -57,8 +57,8 @@ CLIMB_HOOK = 0.5
 CLIMB_UP = 1.0
 
 # absolute maximum, scale of 0-1
-MAX_DRIVE_SPEED = 1.0
-MAX_TURN_SPEED = 1.0
+MAX_DRIVE_SPEED = 0.5
+MAX_TURN_SPEED = 0.5
 
 
 # cameras

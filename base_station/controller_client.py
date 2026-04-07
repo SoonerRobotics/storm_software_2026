@@ -22,10 +22,10 @@ class XboxOneController:
         return self.joy.get_axis(1)
 
     def get_right_stick_x(self) -> float:
-        return self.joy.get_axis(4)
+        return self.joy.get_axis(3)
 
     def get_right_stick_y(self) -> float:
-        return self.joy.get_axis(3)
+        return self.joy.get_axis(4)
 
     def get_trigger_left(self) -> float:
         return self.joy.get_axis(2) #FIXME
@@ -229,7 +229,8 @@ class ControllerClient:
                     try:
                         self.ws.send(json.dumps(msg))
 
-                        print(f'{msg10["left_stick_x"]:0.2f} | {msg10["left_stick_y"]:0.2f} | {msg10["right_stick_x"]:0.2f} | {msg10["right_stick_y"]:0.2f} | {msg10["trigger_left"]:0.2f} | {msg10["trigger_right"]:0.2f}')
+                        # don't remove this debug statement you never know when you'll need to uncomment it... (unless the gui is working)
+                        # print(f'{msg10["left_stick_x"]:0.2f} | {msg10["left_stick_y"]:0.2f} | {msg10["right_stick_x"]:0.2f} | {msg10["right_stick_y"]:0.2f} | {msg10["trigger_left"]:0.2f} | {msg10["trigger_right"]:0.2f}')
                     except Exception as e:
                         #FIXME
                         print(e)

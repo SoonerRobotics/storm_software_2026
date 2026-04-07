@@ -24,16 +24,20 @@ def normalize_wheels(wheels: List[float]) -> List[float]:
     m = max(abs(w) for w in wheels)
     return [w / m for w in wheels] if m > 1.0 else wheels
 
+def square_inputs(val: float) -> float:
+    sign = -1 if val < 0 else 1
+    return sign * (val ** 2)
+
 def mecanum_blend(x: float, y: float, w: float) -> List[float]:
-    vx = clamp(apply_deadzone(x, constants["DEADZONE"]))      # forward/back
-    vy = clamp(apply_deadzone(y, constants["DEADZONE"]))      # strafe right-left
-    omega = clamp(apply_deadzone(w, constants["DEADZONE"]))   # turn
+    vx = clamp(apply_deadzone(square_inputs(x), constants["DEADZONE"]), -constants["MAX_DRIVE_SPEED"], constants["MAX_DRIVE_SPEED"])      # forward/back
+    vy = clamp(apply_deadzone(square_inputs(y), constants["DEADZONE"]), -constants["MAX_DRIVE_SPEED"], constants["MAX_DRIVE_SPEED"])      # strafe right-left
+    omega = clamp(apply_deadzone(square_inputs(w), constants["DEADZONE"]), -constants["MAX_TURN_SPEED"], constants["MAX_TURN_SPEED"])     # turn
 
     fl = vx + vy + omega
     fr = vx - vy - omega
     bl = vx - vy + omega
     br = vx + vy - omega
-    return normalize_wheels([fl, fr, bl, br])
+    return normalize_wheels([-fl, fr, -bl, br]) # left are negative because motors are reversed
 
 # ---------- Robot command struct (Pi -> Pico) ----------
 # needs to be between 0 and 255. assumes speed is a signed percentage float.
@@ -234,9 +238,9 @@ class RobotClient:
 
         # Drive (mecanum)
         cmd.left_front_drive_motor,  \
-        cmd.left_back_drive_motor,   \
         cmd.right_front_drive_motor, \
-        cmd.right_back_drive_motor = mecanum_blend(s.left_stick_x, s.left_stick_y, s.right_stick_x)
+        cmd.left_back_drive_motor,   \
+        cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)
 
         # Intake: right bumper in, left bumper out
         if s.right_bumper:
