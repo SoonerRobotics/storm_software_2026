@@ -91,12 +91,7 @@ def main():
 
     statistics = StatisticsClient(f"{url}:{port}")
 
-    # Start camera WS connection & loop
-    statistics.connect()
-    #FIXME need to make some sort of callback or something? idk look at the serial code in robot.py maybe
-    cam_thread = threading.Thread(target=statistics_loop, args=(statistics,), daemon=True)
-    cam_thread.start()
-    statistics.shutdown()
+    #FIXME do we need a while not stop event too?
 
 if __name__ == "__main__":
     main()
