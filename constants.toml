@@ -43,13 +43,14 @@ CLAW_OPEN = 0.2
 CLAW_CLOSED = 0.8
 
 # linear slide speeds
-SLIDE_EXTEND_SPEED = 0.1
-SLIDE_RETRACT_SPEED = -0.1
-SLIDE_STOW_SPEED = -0.05 # stow speed is not 0 because the motor needs to apply constant torque to kep in position
+SLIDE_EXTEND_SPEED = 0.2
+SLIDE_RETRACT_SPEED = -0.2
+#FIXME this might need to be a thing?
+SLIDE_STOW_SPEED = 0.0 # stow speed is not 0 because the motor needs to apply constant torque to kep in position
 
 # intake speed (intake off speed is 0.0, naturally)
-INTAKE_IN_SPEED = 0.5
-INTAKE_OUT_SPEED = -0.3
+INTAKE_IN_SPEED = 0.7
+INTAKE_OUT_SPEED = -0.5
 
 # climber speeds
 CLIMB_STOW = 0.0
