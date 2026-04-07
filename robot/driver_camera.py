@@ -11,7 +11,6 @@ import tomllib
 
 constants = {}
 
-
 class CameraClient:
     def __init__(self, server_url, constants):
         self.server_url = server_url
@@ -30,6 +29,7 @@ class CameraClient:
         )
         t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 10, "ping_timeout": 5}, daemon=True)
         t.start()
+        print(print(f"Starting camera WS thread with ID: {t.native_id}"))
 
     def on_open(self, ws):
         print("[Camera] WS connected")
@@ -49,14 +49,14 @@ class CameraClient:
         # base64-encode JPEG for easier handling on the UI side
         b64 = base64.b64encode(jpg_bytes).decode("ascii")
         payload = {
-            "id": 20, #FIXME this should be 131
+            "id": 131,
             "ts": time.time(),
             "frame_b64": b64
         }
 
         envelope = {
-            "sender": constants["DRIVER_CAMERA_NAME"],
-            "destination": constants["GUI_NAME"],
+            "sender": self.constants["DRIVER_CAMERA_NAME"],
+            "destination": self.constants["GUI_NAME"],
             "data": json.dumps(payload)
         }
 
@@ -81,11 +81,17 @@ def camera_loop(cam_client: CameraClient):
         print("[Camera] Failed to open camera")
         return
 
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, constants["CAM_WIDTH"])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, constants["CAM_HEIGHT"])
-    cap.set(cv2.CAP_PROP_FPS, constants["CAM_FPS"])
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_client.constants["CAM_WIDTH"])
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_client.constants["CAM_HEIGHT"])
+    cap.set(cv2.CAP_PROP_FPS, cam_client.constants["CAM_FPS"])
 
-    period = 1.0 / constants["CAM_FPS"]
+    # TRANSFORMATION_MATRIX = cv2.getRotationMatrix2D(
+    #     (cam_client.constants["CAM_WIDTH"]/2, cam_client.constants["CAM_HEIGHT"]/2),
+    #     180,
+    #     1
+    # )
+
+    period = 1.0 / cam_client.constants["CAM_FPS"]
     while not cam_client.stop_event.is_set():
         ret, frame = cap.read()
         if not ret:
@@ -94,6 +100,10 @@ def camera_loop(cam_client: CameraClient):
 
         # Optional: downscale / compress more
         # frame = cv2.resize(frame, (CAM_WIDTH, CAM_HEIGHT))
+
+        # image is upside down, rotate by 180 degrees
+        # frame = cv2.warpAffine(frame, TRANSFORMATION_MATRIX, (cam_client.constants["CAM_WIDTH"]/2, cam_client.constants["CAM_HEIGHT"]/2))
+        frame = cv2.rotate(frame, cv2.ROTATE_180)
 
         ok, jpg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
         if ok:
@@ -121,7 +131,14 @@ def main():
     cam_client.connect()
     cam_thread = threading.Thread(target=camera_loop, args=(cam_client,), daemon=True)
     cam_thread.start()
-    cam_client.shutdown()
+    print(print(f"Starting camera thread with ID: {cam_thread.native_id}"))
+    try:
+        while not cam_client.stop_event.is_set():
+            time.sleep(1)
+    except KeyboardInterrupt as e:
+        pass
+    finally:
+        cam_client.shutdown()
 
 if __name__ == "__main__":
     main()
