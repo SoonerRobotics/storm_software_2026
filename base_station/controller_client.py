@@ -9,6 +9,79 @@ import os
 
 constants = {}
 
+# button bindings for Xbox One bluetooth controller
+class XboxOneController:
+    def __init__(self, idx=0):
+        self.joy = pygame.joystick.Joystick(idx)
+        self.joy.init()
+
+    def get_left_stick_x(self) -> float:
+        return self.joy.get_axis(0)
+
+    def get_left_stick_y(self) -> float:
+        return self.joy.get_axis(1)
+
+    def get_right_stick_x(self) -> float:
+        return self.joy.get_axis(4)
+
+    def get_right_stick_y(self) -> float:
+        return self.joy.get_axis(3)
+
+    def get_trigger_left(self) -> float:
+        return self.joy.get_axis(2) #FIXME
+
+    def get_trigger_right(self) -> float:
+        return self.joy.get_axis(5) #FIXME
+
+    def get_button_a(self) -> bool:
+        return self.joy.get_button(0)
+
+    def get_button_b(self) -> bool:
+        return self.joy.get_button(1)
+
+    def get_button_x(self) -> bool:
+        return self.joy.get_button(3)
+
+    def get_button_y(self) -> bool:
+        return self.joy.get_button(4)
+
+    def get_button_left_bumper(self) -> bool:
+        return self.joy.get_button(5)
+
+    def get_button_right_bumper(self) -> bool:
+        return self.joy.get_button(6)
+
+    def get_button_center(self) -> bool:
+        # return self.joy.get_button(11)
+        return False #FIXME idk why but pygame says these are invalid buttons???
+
+    def get_button_left(self) -> bool:
+        return self.joy.get_button(7)
+
+    def get_button_right(self) -> bool:
+        return self.joy.get_button(8)
+
+    def get_left_stick_button(self) -> bool:
+        # return self.joy.get_button(9)
+        return False #FIXME idk why but pygame says these are invalid buttons???
+
+    def get_right_stick_button(self) -> bool:
+        # return self.joy.get_button(10)
+        return False #FIXME idk why but pygame says these are invalid buttons???
+
+    def get_dpad_left(self) -> bool:
+        return self.joy.get_hat(0)[0] == -1
+
+    def get_dpad_right(self) -> bool:
+        return self.joy.get_hat(0)[0] == 1
+
+    def get_dpad_top(self) -> bool:
+        return self.joy.get_hat(0)[1] == -1
+
+    def get_dpad_bottom(self) -> bool:
+        return self.joy.get_hat(0)[1] == 1
+
+
 # ----------------------------
 # Controller Client Class
 # ----------------------------
@@ -86,9 +159,15 @@ class ControllerClient:
     # ----------------------------
     def read_gamepad_loop(self):
         if pygame.joystick.get_count() > 0:
-            self.joystick = pygame.joystick.Joystick(0)
-            self.joystick.init()
-            print(f"[Controller] Detected Joystick: {self.joystick.get_name()}")
+            joy_name = pygame.joystick.Joystick(0).get_name()
+            print(joy_name)
+            if "xinput" in joy_name.lower(): # FIXME what about wired xbox controllers? is this even right????
+                self.joystick = XboxOneController(0)
+                print("starting xbox 1 controller")
+            #TODO do other controller button bindings
+
+            if self.joystick is not None:
+                print(f"[Controller] Detected Joystick: {self.joystick.joy.get_name()}")
         else:
             print("[Controller] No joystick found with Pygame.")
             self.stop_event.set() # Stop the script if no controller
@@ -102,35 +181,33 @@ class ControllerClient:
                     s = self.controller_state
                     # Get Axis values (Sticks/Triggers)
                     try: 
-                        s["left_stick_x"] = self.joystick.get_axis(0)
-                        s["left_stick_y"] = -self.joystick.get_axis(1) 
-                        s["right_stick_x"] = self.joystick.get_axis(2)
-                        s["right_stick_y"] = -self.joystick.get_axis(3) 
-                        s["trigger_left"] = (self.joystick.get_axis(4) + 1) / 2 
-                        s["trigger_right"] = (self.joystick.get_axis(5) + 1) / 2
+                        s["left_stick_x"] = self.joystick.get_left_stick_x()
+                        s["left_stick_y"] = -self.joystick.get_left_stick_y() 
+                        s["right_stick_x"] = self.joystick.get_right_stick_x()
+                        s["right_stick_y"] = -self.joystick.get_right_stick_y() 
+                        s["trigger_left"] = self.joystick.get_trigger_left()
+                        s["trigger_right"] = self.joystick.get_trigger_right()
                     except IndexError:
                         pass 
 
                     # Get Button values (mapping varies by OS/Controller)
-                    s["button_a"] = bool(self.joystick.get_button(0))
-                    s["button_b"] = bool(self.joystick.get_button(1))
-                    s["button_x"] = bool(self.joystick.get_button(3))
-                    s["button_y"] = bool(self.joystick.get_button(2))
-                    s["button_left_bumper"] = bool(self.joystick.get_button(4))
-                    s["button_right_bumper"] = bool(self.joystick.get_button(5))
-                    # s["button_center"] = bool(self.joystick.get_button(11)) # Common mapping for center/mode
-                    s["button_center"] = False
-                    s["button_left"] = bool(self.joystick.get_button(8))   # Common mapping for select
-                    s["button_right"] = bool(self.joystick.get_button(9))  # Common mapping for start
-                    s["left_stick_button"] = False #bool(self.joystick.get_button(12))
-                    s["right_stick_button"] = bool(self.joystick.get_button(10))
+                    s["button_a"] = self.joystick.get_button_a()
+                    s["button_b"] = self.joystick.get_button_b()
+                    s["button_x"] = self.joystick.get_button_x()
+                    s["button_y"] = self.joystick.get_button_y()
+                    s["button_left_bumper"] = self.joystick.get_button_left_bumper()
+                    s["button_right_bumper"] = self.joystick.get_button_right_bumper()
+                    s["button_center"] = self.joystick.get_button_center()
+                    s["button_left"] = self.joystick.get_button_left()
+                    s["button_right"] = self.joystick.get_button_right()
+                    s["left_stick_button"] = self.joystick.get_left_stick_button()
+                    s["right_stick_button"] = self.joystick.get_right_stick_button()
 
                     # Get DPad values (Hat/POV)
-                    hat = self.joystick.get_hat(0)
-                    s["dpad_left"] = (hat[0] == -1)
-                    s["dpad_right"] = (hat[0] == 1)
-                    s["dpad_top"] = (hat[1] == 1)
-                    s["dpad_bottom"] = (hat[1] == -1)
+                    s["dpad_left"] = self.joystick.get_dpad_left()
+                    s["dpad_right"] = self.joystick.get_dpad_right()
+                    s["dpad_top"] = self.joystick.get_dpad_top()
+                    s["dpad_bottom"] = self.joystick.get_dpad_bottom()
 
             time.sleep(0.01) # 100 Hz update rate for polling
 
@@ -152,7 +229,7 @@ class ControllerClient:
                     try:
                         self.ws.send(json.dumps(msg))
 
-                        # print(msg10)
+                        print(f'{msg10["left_stick_x"]:0.2f} | {msg10["left_stick_y"]:0.2f} | {msg10["right_stick_x"]:0.2f} | {msg10["right_stick_y"]:0.2f} | {msg10["trigger_left"]:0.2f} | {msg10["trigger_right"]:0.2f}')
                     except Exception as e:
                         #FIXME
                         print(e)
