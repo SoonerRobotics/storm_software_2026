@@ -29,18 +29,18 @@ END_BYTE = "!" # binary string
 
 # preset positions/speeds
 # STOW = starting configuration, also driving around position
-ARM_BASE_STOW = 0.8
-ARM_BASE_PICK = 0.5
-ARM_BASE_LOW = 0.6
-ARM_BASE_HIGH = 0.7
+ARM_BASE_STOW = 0.0
+ARM_BASE_PICK = 0.0
+ARM_BASE_LOW = 0.7
+ARM_BASE_HIGH = 0.8
 
-WRIST_STOW = 0.2
-WRIST_PICK = 0.7
-WRIST_LEFT = 0.5
-WRIST_RIGHT = 0.5
+WRIST_STOW = 0.5 #FIXME
+WRIST_PICK = 0.5
+WRIST_LEFT = 0.73
+WRIST_RIGHT = 0.27
 
-CLAW_OPEN = 0.2
-CLAW_CLOSED = 0.8
+CLAW_OPEN = 0.18
+CLAW_CLOSED = 0.13
 
 # linear slide speeds
 SLIDE_EXTEND_SPEED = 0.2

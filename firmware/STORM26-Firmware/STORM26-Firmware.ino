@@ -10,18 +10,22 @@
 #define CLIMBER 10
 #define CHARGE 11
 #define EXTRA_1 12
-#define EXTRA_2 13
-#define CLAW_1 14
-#define CLAW_2 15
-#define CLAW_3_LARGE 16
+#define EXTRA_2 13 // arm servo (5 turn)
+#define CLAW_1 14 // wrist servo
+#define CLAW_2 15 // claw
+#define CLAW_3_LARGE 16 // not used
 #define JUMPSTART 26
 #define SWITCH_1 18
 #define SWITCH_2 19
 
 #define LED_PIN 25
 
+#define TIMEOUT_MS 200
+
 const int MOTOR_FREQ = 333;
 char data[14];
+unsigned long lastTime = 0;
+bool timed_out = false;
 
 void setup() {
   pinMode(SWITCH_1, INPUT);
@@ -47,6 +51,8 @@ void setup() {
   analogWriteFreq(MOTOR_FREQ);
   analogWriteResolution(8);
 
+  digitalWrite(LED_PIN, HIGH);
+
 
   Serial.begin(115200);
 }
@@ -56,22 +62,47 @@ void loop() {
   if (Serial.available() >= 13) {
     digitalWrite(LED_PIN, HIGH);
     Serial.readBytes(data, 13);
+
+    lastTime = millis();
+    timed_out = false;
   }
 
-  if((data[0] == '$') && (data[12] == '!')) {
+  if((data[0] == '$') && (data[12] == '!') && !timed_out) {
     analogWrite(NW_DRV, data[1]);
     analogWrite(SW_DRV, data[2]);
     analogWrite(NE_DRV, data[3]);
     analogWrite(SE_DRV, data[4]);
     analogWrite(SLIDE, data[5]);
     analogWrite(INTAKE, data[6]);
-    analogWrite(CLAW_3_LARGE, data[7]);
-    analogWrite(CLAW_2, data[8]);
-    analogWrite(CLAW_1, data[9]);
+    analogWrite(EXTRA_2, data[7]);
+    analogWrite(CLAW_1, data[8]);
+    analogWrite(CLAW_2, data[9]);
     analogWrite(CLIMBER, data[10]);
     // analogWrite(CHARGE, data[11]); // no charging wheel, in software packet this is actually jumpstart...
     // TODO JUMPSTART
 
     digitalWrite(LED_PIN, LOW);
+  }
+
+  // firmware watchdog / sort of e-stop
+  if ((millis() - lastTime) > TIMEOUT_MS) {
+    timed_out = true;
+
+    digitalWrite(NW_DRV, LOW);
+    digitalWrite(SW_DRV, LOW);
+    digitalWrite(NE_DRV, LOW);
+    digitalWrite(SE_DRV, LOW);
+    digitalWrite(SLIDE, LOW);
+    digitalWrite(INTAKE, LOW);
+
+    digitalWrite(CLAW_3_LARGE, LOW); //FIXME servos should go to their STOW positions
+    digitalWrite(CLAW_1, LOW); // make sure to keep up to date with constants.toml
+    digitalWrite(CLAW_2, LOW);
+    
+    digitalWrite(CLIMBER, LOW);
+    // analogWrite(CHARGE, data[11]); // no charging wheel, in software packet this is actually jumpstart...
+    // TODO JUMPSTART
+
+    digitalWrite(LED_PIN, HIGH);
   }
 }
