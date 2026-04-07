@@ -13,11 +13,13 @@ constants = {}
 
 
 class CameraClient:
-    def __init__(self, server_url):
+    def __init__(self, server_url, constants):
         self.server_url = server_url
         self.ws = None
         self.stop_event = threading.Event()
         self.connected = False
+
+        self.constants = constants
 
     def connect(self):
         self.ws = websocket.WebSocketApp(
@@ -74,7 +76,7 @@ class CameraClient:
                 pass
 
 def camera_loop(cam_client: CameraClient):
-    cap = cv2.VideoCapture(constants["DRIVER_CAM_DEVICE_INDEX"])
+    cap = cv2.VideoCapture(cam_client.constants["DRIVER_CAM_DEVICE_INDEX"])
     if not cap.isOpened():
         print("[Camera] Failed to open camera")
         return
@@ -113,7 +115,7 @@ def main():
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
-    cam_client = CameraClient(f"{url}:{port}")
+    cam_client = CameraClient(f"{url}:{port}", constants)
 
     # Start camera WS connection & loop
     cam_client.connect()

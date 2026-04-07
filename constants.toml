@@ -62,13 +62,15 @@ MAX_DRIVE_SPEED = 0.5
 MAX_TURN_SPEED = 0.5
 
 
-# cameras
+# == cameras ==
+# driver camera
 DRIVER_CAM_DEVICE_INDEX = 0 # /dev/video0
-APRILTAG_CAM_DEVICE_INDEX = 1 # /dev/video1
 CAM_WIDTH = 640
 CAM_HEIGHT = 360
 CAM_FPS = 10.0       # desired send rate
 
+# apriltag camera
+APRILTAG_CAM_DEVICE_INDEX = 1 # /dev/video1
 
 
 # --- Base-station constants ---
