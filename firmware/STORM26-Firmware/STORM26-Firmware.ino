@@ -26,58 +26,33 @@
 // I don't necessarily like hard-coded configurations... maybe on the Pico's filesystem would be better?
 #define CLAW_DEFAULT 33
 #define WRIST_DEFAULT 127
-#define ARM_DEFAULT 204
+#define ARM_DEFAULT 178
 
-#define TIMER_INTERRUPT_DEBUG 1
-#define _TIMERINTERRUPT_LOGLEVEL_ 4
-
-#include "RPi_Pico_TimerInterrupt.h"
-#include "RPi_Pico_ISR_Timer.h"
 #include <Wire.h>
 #include <Adafruit_DS3502.h>
 
 Adafruit_DS3502 ds3502 = Adafruit_DS3502();
 
-#define pinSCL 3
-#define pinSDA 2
-#define pinADC 26
-
 #define TIMER_INTERVAL_MS 500L
 
-// Init RPI_PICO_Timer
-RPI_PICO_Timer ITimer1(1);
-
-RPI_PICO_ISR_Timer ISR_timer;
-
-// Temporary Input- Delete for whatever actual mechanism is
+// jumpstart stuff
 int targetV = 2;
-
 int currentWiper = 0;
 double voltageOut = 0.0;
 
 const int MOTOR_FREQ = 333;
 char data[14];
 unsigned long lastTime = 0;
+
+// loss-of-serial / loss-of-signal
 bool timed_out = false;
 bool connected = false;
 
-bool TimerHandler(struct repeating_timer *t) {
-  (void)t;
-
-  static bool toggle = false;
-  static int timeRun = 0;
-
-  ISR_timer.run();
-
-  return true;
-}
-
-
 // Main Control Function
-void adjustVoltage() {
-  voltageOut = (analogRead(pinADC) / 1023.0 * 3.3);
+void adjustVoltage(int target) {
+  voltageOut = (analogRead(JUMPSTART) / 1023.0 * 3.3);
 
-  switch (targetV) {
+  switch (target) {
     case 2:
       if (voltageOut <= 0.51) {
         currentWiper = currentWiper + 2;
@@ -131,7 +106,7 @@ void adjustVoltage() {
     currentWiper = 127;
   } 
 
-  ds3502.setWiper(currentWiper);
+  // ds3502.setWiper(currentWiper);
 }
 
 void setup() {
@@ -163,9 +138,9 @@ void setup() {
 
   Serial.begin(115200);
 
-  Wire1.setSCL(pinSCL);
-  Wire1.setSDA(pinSDA);
-  Wire1.begin();
+  // Wire1.setSCL(SCL);
+  // Wire1.setSDA(SDA);
+  // Wire1.begin();
   
   //FIXME idk if we want to include this here
   // if (!ds3502.begin(40, &Wire1)) {
@@ -173,36 +148,8 @@ void setup() {
       // ;
   // }
 
-  ds3502.begin(40, &Wire1);
-
-
-  ITimer1.attachInterruptInterval(TIMER_INTERVAL_MS * 1000, TimerHandler);
-
-  switch (targetV) {
-    case 2: 
-      currentWiper = 25;
-      break;
-
-    case 4:
-      currentWiper = 50;
-      break;
-
-    case 6:
-      currentWiper = 77;
-      break;
-
-    case 8:
-      currentWiper = 100;
-      break;
-
-    case 10:
-      currentWiper = 127;
-      break;
-  }
-
-  ds3502.setWiper(currentWiper);
-
-  ISR_timer.setInterval(500L, adjustVoltage);
+  // ds3502.begin(40, &Wire1);
+  // ds3502.setWiper(25);
 }
 
 void loop() {
@@ -215,27 +162,39 @@ void loop() {
     timed_out = false;
   }
 
-  if((data[0] == '$') && (data[13] == '!') && !timed_out && connected) {
-    analogWrite(NW_DRV, data[1]);
-    analogWrite(SW_DRV, data[2]);
-    analogWrite(NE_DRV, data[3]);
-    analogWrite(SE_DRV, data[4]);
-    if (digitalRead(SWITCH_1)) {
-      analogWrite(SLIDE, data[5]);
-    } else {
-      analogWrite(SLIDE, 127);
-    }
-    analogWrite(INTAKE, data[6]);
-    analogWrite(EXTRA_2, data[7]);
-    analogWrite(CLAW_1, data[8]);
-    analogWrite(CLAW_2, data[9]);
-    analogWrite(CLIMBER, data[10]);
-    // analogWrite(CHARGE, data[11]); // no charging wheel, in software packet this is actually jumpstart...
-    targetV = data[11];
-
+  if((data[0] == '$') && (data[13] == '!') && !timed_out) {
     connected = data[12]; // for loss of signal
+    
+    if (connected) {
+      analogWrite(NW_DRV, data[1]);
+      analogWrite(SW_DRV, data[2]);
+      analogWrite(NE_DRV, data[3]);
+      analogWrite(SE_DRV, data[4]);
+      
+      // linear slide limit switch check
+      if (!digitalRead(SWITCH_1)) {
+        // only let us go backwards
+        if (data[5] <= 127) {
+          analogWrite(SLIDE, data[5]);
+        } else {
+          //TODO do we want this to be a digitalWrite(0) instead to like, completely turn the motor controller off?
+          analogWrite(SLIDE, 127);
+        }
+      } else {
+        analogWrite(SLIDE, data[5]);
+      }
+      
+      analogWrite(INTAKE, data[6]);
+      analogWrite(EXTRA_2, data[7]);
+      analogWrite(CLAW_1, data[8]);
+      analogWrite(CLAW_2, data[9]);
+      analogWrite(CLIMBER, data[10]);
+      
+      // jumpstart stuff
+      adjustVoltage(data[11]);
 
-    digitalWrite(LED_PIN, LOW);
+      digitalWrite(LED_PIN, LOW);
+    }
   }
 
   // firmware watchdog / sort of e-stop
@@ -249,9 +208,9 @@ void loop() {
     digitalWrite(SLIDE, LOW);
     digitalWrite(INTAKE, LOW);
 
-    digitalWrite(CLAW_1, WRIST_DEFAULT); //FIXME servos should go to their STOW positions
-    digitalWrite(CLAW_2, CLAW_DEFAULT); // make sure to keep up to date with constants.toml
-    digitalWrite(EXTRA_2, ARM_DEFAULT);
+    analogWrite(CLAW_1, WRIST_DEFAULT); //FIXME servos should go to their STOW positions
+    analogWrite(CLAW_2, CLAW_DEFAULT); // make sure to keep up to date with constants.toml
+    analogWrite(EXTRA_2, ARM_DEFAULT);
     
     digitalWrite(CLIMBER, LOW);
     // analogWrite(CHARGE, data[11]); // no charging wheel, in software packet this is actually jumpstart...
