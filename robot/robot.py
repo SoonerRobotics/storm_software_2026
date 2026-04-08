@@ -349,7 +349,7 @@ if __name__ == "__main__":
 
     # have to update this after reading the constants file
     default_robot_command = RobotCommand()
-    default_robot_command.arm_servo_pos = constants["ARM_BASE_STOW"]
+    default_robot_command.arm_servo_pos = constants["ARM_BASE_LOW"]
     default_robot_command.wrist_servo_pos = constants["WRIST_STOW"]
     default_robot_command.claw_servo_pos = constants["CLAW_CLOSED"]
 
