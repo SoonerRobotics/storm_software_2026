@@ -13,7 +13,7 @@
 #define EXTRA_2 13 // arm servo (5 turn)
 #define CLAW_1 14 // wrist servo
 #define CLAW_2 15 // claw
-#define CLAW_3_LARGE 16 // Safety Lights
+#define CLAW_3_LARGE 20 // Safety Lights
 #define JUMPSTART 26
 #define SWITCH_1 18 // linear slide limit switch
 #define SWITCH_2 19
@@ -35,7 +35,7 @@
 // Safety Lights
 
 static const int BLINK_PERIOD_MS = 500;
-static const int DEFAULT_BRIGHTNESS = 50;
+static const int DEFAULT_BRIGHTNESS = 20;
 
 static const int CLED_COUNT = 21;
 static const int CLED_PIN = CLAW_3_LARGE;
@@ -44,7 +44,7 @@ Adafruit_NeoPixel strip(CLED_COUNT, CLED_PIN, NEO_GRB);
 
 int current_brightness = DEFAULT_BRIGHTNESS;
 int current_blink_period = BLINK_PERIOD_MS;
-int current_color = strip.Color(255, 105, 180);
+int current_color = strip.Color(255, 0, 60);
 
 Adafruit_DS3502 ds3502 = Adafruit_DS3502();
 
@@ -165,9 +165,26 @@ void setup() {
 
   // ds3502.begin(40, &Wire1);
   // ds3502.setWiper(25);
+
+  strip.begin();
+  strip.setBrightness(current_brightness);
 }
 
 void loop() {
+  if (connected) {
+    // Blink safety lights
+      if ((millis() / current_blink_period) % 2 == 0) {
+              strip.fill(current_color);
+          } else {
+              strip.fill(0);
+          }
+          strip.show();
+  }
+  else {
+      // Solid Safety light color
+      strip.fill(current_color);
+      strip.show();
+    }
   // put your main code here, to run repeatedly:
   if (Serial.available() >= 14) {
     // digitalWrite(LED_PIN, HIGH);
@@ -181,14 +198,7 @@ void loop() {
     connected = data[12]; // for loss of signal
     
     if (connected) {
-      // Blink safety lights
-      if ((millis() / current_blink_period) % 2 == 0) {
-              strip.fill(current_color);
-          } else {
-              strip.fill(0);
-          }
-          strip.show();
-        
+      
       analogWrite(NW_DRV, data[1]);
       analogWrite(SW_DRV, data[2]);
       analogWrite(NE_DRV, data[3]);
@@ -222,10 +232,6 @@ void loop() {
 
   // firmware watchdog / sort of e-stop
   if ((millis() - lastTime) > TIMEOUT_MS) {
-    // Solid Safety light color
-    strip.fill(current_color);
-    strip.show();
-
     timed_out = true;
 
     digitalWrite(NW_DRV, LOW);
