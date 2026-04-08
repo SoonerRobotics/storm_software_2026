@@ -81,6 +81,77 @@ class XboxOneController:
     def get_dpad_bottom(self) -> bool:
         return self.joy.get_hat(0)[1] == 1
 
+# button bindings for Xbox One bluetooth controller when connected to Linux
+class LinuxXboxOneController:
+    def __init__(self, idx=0):
+        self.joy = pygame.joystick.Joystick(idx)
+        self.joy.init()
+
+    def get_left_stick_x(self) -> float:
+        return self.joy.get_axis(0)
+
+    def get_left_stick_y(self) -> float:
+        return self.joy.get_axis(1)
+
+    def get_right_stick_x(self) -> float:
+        return self.joy.get_axis(3)
+
+    def get_right_stick_y(self) -> float:
+        return self.joy.get_axis(4)
+
+    def get_trigger_left(self) -> float:
+        return self.joy.get_axis(2) #FIXME
+
+    def get_trigger_right(self) -> float:
+        return self.joy.get_axis(5) #FIXME
+
+    def get_button_a(self) -> bool:
+        return self.joy.get_button(0)
+
+    def get_button_b(self) -> bool:
+        return self.joy.get_button(1)
+
+    def get_button_x(self) -> bool:
+        return self.joy.get_button(3)
+
+    def get_button_y(self) -> bool:
+        return self.joy.get_button(4)
+
+    def get_button_left_bumper(self) -> bool:
+        return self.joy.get_button(5)
+
+    def get_button_right_bumper(self) -> bool:
+        return self.joy.get_button(6)
+
+    def get_button_center(self) -> bool:
+        # return self.joy.get_button(11)
+        return False #FIXME idk why but pygame says these are invalid buttons???
+
+    def get_button_left(self) -> bool:
+        return self.joy.get_button(7)
+
+    def get_button_right(self) -> bool:
+        return self.joy.get_button(8)
+
+    def get_left_stick_button(self) -> bool:
+        # return self.joy.get_button(9)
+        return False #FIXME idk why but pygame says these are invalid buttons???
+
+    def get_right_stick_button(self) -> bool:
+        # return self.joy.get_button(10)
+        return False #FIXME idk why but pygame says these are invalid buttons???
+
+    def get_dpad_left(self) -> bool:
+        return self.joy.get_hat(0)[0] == -1
+
+    def get_dpad_right(self) -> bool:
+        return self.joy.get_hat(0)[0] == 1
+
+    def get_dpad_top(self) -> bool:
+        return self.joy.get_hat(0)[1] == -1
+
+    def get_dpad_bottom(self) -> bool:
+        return self.joy.get_hat(0)[1] == 1
 
 # ----------------------------
 # Controller Client Class
@@ -164,6 +235,9 @@ class ControllerClient:
             if "xinput" in joy_name.lower(): # FIXME what about wired xbox controllers? is this even right????
                 self.joystick = XboxOneController(0)
                 print("starting xbox 1 controller")
+            elif "xbox" in joy_name.lower():
+                self.joystick = LinuxXboxOneController(0)
+                print("starting linux xbox 1 controller")
             #TODO do other controller button bindings
 
             if self.joystick is not None:
