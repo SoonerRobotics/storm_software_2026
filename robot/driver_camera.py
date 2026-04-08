@@ -85,12 +85,6 @@ def camera_loop(cam_client: CameraClient):
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_client.constants["CAM_HEIGHT"])
     cap.set(cv2.CAP_PROP_FPS, cam_client.constants["CAM_FPS"])
 
-    # TRANSFORMATION_MATRIX = cv2.getRotationMatrix2D(
-    #     (cam_client.constants["CAM_WIDTH"]/2, cam_client.constants["CAM_HEIGHT"]/2),
-    #     180,
-    #     1
-    # )
-
     period = 1.0 / cam_client.constants["CAM_FPS"]
     while not cam_client.stop_event.is_set():
         ret, frame = cap.read()
@@ -101,8 +95,6 @@ def camera_loop(cam_client: CameraClient):
         # Optional: downscale / compress more
         # frame = cv2.resize(frame, (CAM_WIDTH, CAM_HEIGHT))
 
-        # image is upside down, rotate by 180 degrees
-        # frame = cv2.warpAffine(frame, TRANSFORMATION_MATRIX, (cam_client.constants["CAM_WIDTH"]/2, cam_client.constants["CAM_HEIGHT"]/2))
         frame = cv2.rotate(frame, cv2.ROTATE_180)
 
         ok, jpg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])

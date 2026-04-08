@@ -23,4 +23,4 @@ echo "Activating virtual environment..."
 # we should check which ones are installed and whatnot
 # or honestly make a virtual environment
 echo "Installing python packages..."
-pip3 install opencv-python websocket-client #TODOFIXME
+pip3 install opencv-python websocket-client robotpy-apriltag #TODOFIXME
