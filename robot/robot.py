@@ -46,7 +46,7 @@ def scale_motor_speed(speed: float) -> int:
 
 # needs to be between 0 and 255. assumes pos is degrees.
 def scale_servo_pos(pos: float) -> int:
-     return int(pos * 255) #FIXME do I need a 360 or 2pi somewhere in here???
+    return int(pos * 255) #FIXME do I need a 360 or 2pi somewhere in here???
 
 
 #FIXME are these good default values?
@@ -67,6 +67,8 @@ class RobotCommand:
     climb_motor_speed: float = 0.0
 
     jumpstart_voltage: int = 0
+
+    connected: bool = False # for loss-of-signal
 
 @dataclass
 class ControllerState:
@@ -112,7 +114,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
     # so no COMMAND bytes, but keeping the start and end bytes
 
     #FIXME is it supposed to be little or big endian?
-    msg = struct.pack(">c11Bc",
+    msg = struct.pack(">c12Bc",
                       bytes(constants["START_BYTE"], 'ascii'),
                       scale_motor_speed(cmd.left_front_drive_motor),
                       scale_motor_speed(cmd.left_back_drive_motor),
@@ -125,6 +127,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
                       scale_servo_pos(cmd.claw_servo_pos),
                       scale_motor_speed(cmd.climb_motor_speed),
                       cmd.jumpstart_voltage,
+                      cmd.connected,
                       bytes(constants["END_BYTE"], 'ascii'))
     return msg
 
@@ -286,6 +289,8 @@ class RobotClient:
 
         # Jumpstart voltage FIXME this just runs 100% of the time lol
         #TODO FIXME
+
+        cmd.connected = self.connected_ws
 
         self.robot_cmd = cmd
 
