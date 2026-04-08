@@ -94,16 +94,16 @@ class LinuxXboxOneController:
         return self.joy.get_axis(1)
 
     def get_right_stick_x(self) -> float:
-        return self.joy.get_axis(3)
+        return self.joy.get_axis(2)
 
     def get_right_stick_y(self) -> float:
-        return self.joy.get_axis(4)
+        return self.joy.get_axis(3)
 
     def get_trigger_left(self) -> float:
-        return self.joy.get_axis(2) #FIXME
+        return self.joy.get_axis(5) #FIXME
 
     def get_trigger_right(self) -> float:
-        return self.joy.get_axis(5) #FIXME
+        return self.joy.get_axis(4) #FIXME
 
     def get_button_a(self) -> bool:
         return self.joy.get_button(0)
@@ -118,13 +118,13 @@ class LinuxXboxOneController:
         return self.joy.get_button(4)
 
     def get_button_left_bumper(self) -> bool:
-        return self.joy.get_button(5)
-
-    def get_button_right_bumper(self) -> bool:
         return self.joy.get_button(6)
 
+    def get_button_right_bumper(self) -> bool:
+        return self.joy.get_button(5)
+
     def get_button_center(self) -> bool:
-        # return self.joy.get_button(11)
+        return self.joy.get_button(11)
         return False #FIXME idk why but pygame says these are invalid buttons???
 
     def get_button_left(self) -> bool:
@@ -134,11 +134,11 @@ class LinuxXboxOneController:
         return self.joy.get_button(8)
 
     def get_left_stick_button(self) -> bool:
-        # return self.joy.get_button(9)
+        return self.joy.get_button(9)
         return False #FIXME idk why but pygame says these are invalid buttons???
 
     def get_right_stick_button(self) -> bool:
-        # return self.joy.get_button(10)
+        return self.joy.get_button(10)
         return False #FIXME idk why but pygame says these are invalid buttons???
 
     def get_dpad_left(self) -> bool:
