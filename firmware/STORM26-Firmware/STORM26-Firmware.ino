@@ -40,11 +40,11 @@ static const int DEFAULT_BRIGHTNESS = 50;
 static const int CLED_COUNT = 21;
 static const int CLED_PIN = CLAW_3_LARGE;
 
+Adafruit_NeoPixel strip(CLED_COUNT, CLED_PIN, NEO_GRB);
+
 int current_brightness = DEFAULT_BRIGHTNESS;
 int current_blink_period = BLINK_PERIOD_MS;
 int current_color = strip.Color(255, 105, 180);
-
-Adafruit_NeoPixel strip(CLED_COUNT, CLED_PIN, NEO_GRB);
 
 Adafruit_DS3502 ds3502 = Adafruit_DS3502();
 
