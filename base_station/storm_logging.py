@@ -8,11 +8,12 @@ import csv
 import cv2
 import threading
 import psutil
+import time
 
 constants = {}
 
 class LoggingClient:
-    def __init__(self, server_url):
+    def __init__(self, server_url, log_path_prefix):
         self.ws = websocket.WebSocketApp(
             server_url,
             on_open=self.on_open,
@@ -21,10 +22,16 @@ class LoggingClient:
             on_error=self.on_error
         )
 
-        self.filename = "" #FIXME default filename... where do we want files to go?
+        self.log_path_prefix = log_path_prefix #FIXME do we want/need to do some os.path.join() or something?
+        self.filename = ""
+        self.file = None
+        self.writer = None
+        #FIXME do we need a lock?
 
         self.t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 1, "ping_timeout": 0.5}, daemon=True)
         self.t.start()
+        print(f"[Logging] Starting thread with ID {self.t.native_id}")
+
     
     def on_open(self, ws):
         print("[Logging] Logging WS connected")
@@ -34,21 +41,31 @@ class LoggingClient:
     def on_message(self, ws, raw):
         #FIXME we might need a Lock()
         try:
+            #FIXME get timestamp too? for logging???
             msg = json.loads(json.load(raw)["data"])
 
-            if msg["id"] == 30:
-                # if it's a like, "start match" message we should start a new file
-                # filename is like, date and time .csv
-                pass
-            elif msg["id"] == camera:
-                pass
-                # except! for videos... copy the code from autonav_logging.py from 2025
-            else:
-                # just throw all the messages in there
-                #TODO FIXME
-                print(msg)
+            match (msg["id"]):
+                case 30:
+                    # if it's a like, "start match" message we should start a new file
+                    # filename is like, date and time .csv
+                    pass
+                case 31:
+                    # match start message, one field "timestamp" unsigned long for the start of the match?
+                    pass
+                case _:
+                    # to handle if there is no GUI
+                    if self.file is None:
+                        self.file = open(f"{self.filename}temp_{time.time()}.csv", "at", newline='')
+                    
+                    if self.writer is None:
+                        self.writer = csv.writer(self.file)
+
+
+
+                    # just throw all the messages in there FIXME?
+                    self.writer.writerow(msg) #??? msg.values()? msg.keys()? dir(msg)? dict(msg)?
             
-            #TODO also log like, CPU and RAM percentage of base station
+            #TODO also log like, CPU and RAM percentage of base station?
 
 
         except Exception as e:
@@ -57,6 +74,11 @@ class LoggingClient:
     def on_close(self, ws, code, reason):
         #FIXME we might need a stop_event() like in controller_client
         print("[Logging] WS closed:", code, reason)
+        if self.file is not None:
+            self.file.close()
+
+            self.file = None
+            self.writer = None
     
     def on_error(self, ws, error):
         print(f"[Logging] WS error: {error}")
@@ -72,4 +94,6 @@ def main():
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"] #FIXME this might need to be localhost if running on the robot...?
 
-    logger = LoggingClient(f"{url}:{port}")
+    logger = LoggingClient(f"{url}:{port}", constants["LOGGING_PATH"])
+
+    #FIXME might need a while True and stop event and stuff down here too

@@ -80,3 +80,4 @@ UPDATE_HZ = 50.0 # = 20ms
 
 # logging / statistics
 STATISTICS_UPDATE_INTERVAL = 5 # every this many seconds
+LOGGING_PATH = "~/Documents/log/STORM_2026/"
