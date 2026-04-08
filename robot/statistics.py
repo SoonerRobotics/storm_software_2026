@@ -8,14 +8,16 @@ import websocket
 import psutil
 import tomllib
 import json
+import time
 
 constants = {}
 
 @dataclass
 class StatisticsMessage:
-    cpu_percent: List[float] = [0.0]
+    cpu_percent: float = 0.0
+    cpu_frequency: float = 0.0
     ram_percent: float = 0.0
-    cpu_temperature: float = 0.0
+    temperature: float = 0.0
 
 class StatisticsClient:
     def __init__(self, server_url):
@@ -33,6 +35,7 @@ class StatisticsClient:
         )
         t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 10, "ping_timeout": 5}, daemon=True)
         t.start()
+        print(f"[Statistics] Starting statistics thread with ID {t.native_id}")
 
     def on_open(self, ws):
         print("[Statistics] WS connected")
@@ -52,9 +55,10 @@ class StatisticsClient:
         
         payload = {
             "id": 170,
-            "cpu_percent": psutil.cpu_percent(),
-            "ram_percent": psutil.virtual_memory(),
-            "cpu_temperature": psutil.sensors_temperatures()
+            "cpu_percent": psutil.cpu_percent(0.0, False),
+            "cpu_frequency": psutil.cpu_freq(False).current,
+            "ram_percent": psutil.virtual_memory().percent,
+            "temperature": psutil.sensors_temperatures()
         }
 
         envelope = {
@@ -68,6 +72,8 @@ class StatisticsClient:
                 self.ws.send(json.dumps(envelope))
             except Exception as e:
                 print(f"[Statistics] send error: {e}")
+        
+        time.sleep(constants["STATISTICS_UPDATE_INTERVAL"])
 
     def shutdown(self):
         self.stop_event.set()
@@ -91,7 +97,13 @@ def main():
 
     statistics = StatisticsClient(f"{url}:{port}")
 
-    #FIXME do we need a while not stop event too?
+    try:
+        while not statistics.stop_event.is_set():
+            time.sleep(1) #FIXME is this a good number?
+    except KeyboardInterrupt as e:
+        pass #FIXME?
+    finally:
+        statistics.shutdown()
 
 if __name__ == "__main__":
     main()
