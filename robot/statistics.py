@@ -55,6 +55,7 @@ class StatisticsClient:
         
         payload = {
             "id": 170,
+            "timestamp": time.time(),
             "cpu_percent": psutil.cpu_percent(0.0, False),
             "cpu_frequency": psutil.cpu_freq(False).current,
             "ram_percent": psutil.virtual_memory().percent,
