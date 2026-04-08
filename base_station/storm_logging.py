@@ -9,6 +9,8 @@ import cv2
 import threading
 import psutil
 import time
+import os
+import base64
 
 constants = {}
 
@@ -26,6 +28,7 @@ class LoggingClient:
         self.filename = ""
         self.file = None
         self.writer = None
+        self.video_writer = None
         #FIXME do we need a lock?
 
         self.t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 1, "ping_timeout": 0.5}, daemon=True)
@@ -48,14 +51,28 @@ class LoggingClient:
                 case 30:
                     # if it's a like, "start match" message we should start a new file
                     # filename is like, date and time .csv
+                    # need to do like an os.makedirs()
                     pass
                 case 31:
                     # match start message, one field "timestamp" unsigned long for the start of the match?
                     pass
+
+                case 131: # driver camera
+                    if self.video_writer is None:
+                        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+
+                        self.video_writer = cv2.VideoWriter(f"{self.log_path_prefix}temp_{time.time()}.avi", fourcc, constants["CAM_FPS"], (constants["CAM_WIDTH"], constants["CAM_HEIGHT"]))
+
+                        encoded = base64.b64decode(msg["frame_b64"])
+                        frame = cv2.imdecode(encoded)
+
+                        self.video_writer.write(frame)
+        
+                
                 case _:
                     # to handle if there is no GUI
                     if self.file is None:
-                        self.file = open(f"{self.filename}temp_{time.time()}.csv", "at", newline='')
+                        self.file = open(f"{self.log_path_prefix}temp_{time.time()}.csv", "at", newline='')
                     
                     if self.writer is None:
                         self.writer = csv.writer(self.file)
