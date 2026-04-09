@@ -20,11 +20,13 @@ class StatisticsMessage:
     temperature: float = 0.0
 
 class StatisticsClient:
-    def __init__(self, server_url):
+    def __init__(self, server_url, constants):
         self.server_url = server_url
         self.ws = None
         self.stop_event = threading.Event()
         self.connected = False
+
+        self.constants = constants
 
     def connect(self):
         self.ws = websocket.WebSocketApp(
@@ -35,7 +37,7 @@ class StatisticsClient:
         )
         t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 10, "ping_timeout": 5}, daemon=True)
         t.start()
-        print(f"[Statistics] Starting statistics thread with ID {t.native_id}")
+        print(f"[Statistics] Starting statistics WS thread with ID {t.native_id}")
 
     def on_open(self, ws):
         print("[Statistics] WS connected")
@@ -49,32 +51,34 @@ class StatisticsClient:
     def on_error(self, ws, error):
         print("[Statistics] WS error:", error)
 
-    def send_msg(self):
-        if not self.connected:
-            return
-        
-        payload = {
-            "id": 170,
-            "timestamp": time.time(),
-            "cpu_percent": psutil.cpu_percent(0.0, False),
-            "cpu_frequency": psutil.cpu_freq(False).current,
-            "ram_percent": psutil.virtual_memory().percent,
-            "temperature": psutil.sensors_temperatures()
-        }
+    def run_forever(self):
+        while not self.stop_event.is_set():
+            if not self.connected:
+                time.sleep(1)
+                continue
+            
+            payload = {
+                "id": 170,
+                "timestamp": time.time(),
+                "cpu_percent": psutil.cpu_percent(0.0, False),
+                "cpu_frequency": f"{psutil.cpu_freq(False).current/1000:.3f}",
+                "ram_percent": psutil.virtual_memory().percent,
+                "temperature": psutil.sensors_temperatures()["coretemp"][0][1] #FIXME I have no idea if this is the right one
+            }
 
-        envelope = {
-            "sender": constants["STATISTICS_NAME"],
-            "destination": constants["GUI_NAME"],
-            "data": json.dumps(payload)
-        }
+            envelope = {
+                "sender": self.constants["STATISTICS_NAME"],
+                "destination": self.constants["GUI_NAME"],
+                "data": json.dumps(payload)
+            }            
 
-        if self.ws is not None:
-            try:
-                self.ws.send(json.dumps(envelope))
-            except Exception as e:
-                print(f"[Statistics] send error: {e}")
-        
-        time.sleep(constants["STATISTICS_UPDATE_INTERVAL"])
+            if self.ws is not None:
+                try:
+                    self.ws.send(json.dumps(envelope))
+                except Exception as e:
+                    print(f"[Statistics] send error: {e}")
+            
+            time.sleep(self.constants["STATISTICS_UPDATE_INTERVAL"])
 
     def shutdown(self):
         self.stop_event.set()
@@ -90,14 +94,18 @@ def main():
         try:
             constants = tomllib.load(const_file)
         except Exception as e:
-            print("[Robot] Failed to read constants file")
+            print("[Statistics] Failed to read constants file")
             raise SystemExit
     
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
-    statistics = StatisticsClient(f"{url}:{port}")
-
+    statistics = StatisticsClient(f"{url}:{port}", constants)
+    statistics.connect()
+    statistics_thread = threading.Thread(target=statistics.run_forever, daemon=True)
+    statistics_thread.start()
+    print(print(f"Starting statistics thread with ID: {statistics_thread.native_id}"))
+    
     try:
         while not statistics.stop_event.is_set():
             time.sleep(1) #FIXME is this a good number?

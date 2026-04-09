@@ -63,13 +63,22 @@
     <div id="gpStatus">No gamepad</div>
     <div style="margin-top:6px;"><small>When in MANUAL mode, the gamepad controls motors</small></div>
   </div>
+
+  <div style="margin-top:12px;">
+    <strong>Pi Statistics</strong>
+    <div style="font-weight: bold;margin-top: 2px;">CPU Utilization: <span style="font-weight: normal;" id="cpu_usage">No CPU</span>%</div>
+    <div style="font-weight: bold;margin-top: 2px;">CPU Frequency: <span style="font-weight: normal;" id="cpu_frequency">No frequeny</span> GHz</div>
+    <div style="font-weight: bold;margin-top: 2px;">RAM Utilization: <span style="font-weight: normal;" id="ram_percent">No RAM</span>%</div>
+    <div style="font-weight: bold;margin-top: 2px;">CPU Temperature: <span style="font-weight: normal;" id="temperature">No temperature</span> *F</div>
+  </div>
 </div>
 
 <script>
 /* =========================
    CONFIG - EDIT THESE
    ========================= */
-const RELAY_WS = "ws://192.168.8.174:1909";
+// const RELAY_WS = "ws://192.168.8.174:1909";
+const RELAY_WS = "ws://127.0.0.1:1909";
 const ROBOT_NAME = "robot";
 const GUI_NAME = "gui";
 const CAMERA_NAME = "driver_camera"; // should match constants["DRIVER_CAMERA_NAME"]
@@ -219,6 +228,13 @@ function startRelayWS(){
       if(payload.id === 141){
         document.getElementById('debugOut').textContent = 'AprilTag data moved to separate feed';
         return;
+      }
+
+      else if (payload.id === 170) {
+        document.getElementById("cpu_usage").innerHTML = payload.cpu_percent;
+        document.getElementById("cpu_frequency").innerHTML = payload.cpu_frequency;
+        document.getElementById("ram_percent").innerHTML = payload.ram_percent;
+        document.getElementById("temperature").innerHTML = payload.temperature;
       }
 
       console.log('relay in', payload);
