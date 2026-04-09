@@ -124,6 +124,7 @@ def main():
     cam_thread = threading.Thread(target=camera_loop, args=(cam_client,), daemon=True)
     cam_thread.start()
     print(print(f"Starting camera thread with ID: {cam_thread.native_id}"))
+    
     try:
         while not cam_client.stop_event.is_set():
             time.sleep(1)

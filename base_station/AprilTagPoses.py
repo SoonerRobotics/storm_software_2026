@@ -53,7 +53,8 @@ class AprilTagClient:
             self.server_url,
             on_open=self.on_open,
             on_close=self.on_close,
-            on_error=self.on_error
+            on_error=self.on_error,
+            on_message=self.on_message
         )
         t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 10, "ping_timeout": 5}, daemon=True)
         t.start()
@@ -62,6 +63,14 @@ class AprilTagClient:
     def on_open(self, ws):
         print("[AprilTag] WS connected")
         self.connected = True
+
+        # let the relay server know where we are
+        ws.send(json.dumps({
+            "sender": self.constants["APRILTAG_NAME"],
+            "destination": self.constants["ROBOT_NAME"],
+            "data": "{}"
+        }))
+
 
     def on_close(self, ws, code, reason):
         print("[AprilTag] WS closed:", code, reason)
@@ -76,7 +85,7 @@ class AprilTagClient:
             return
         
         msg = json.loads(raw)
-        if msg.get("destination") != constants["APRTAG_NAME"]:
+        if msg.get("destination") != self.constants["APRILTAG_NAME"]:
             return
         
         payload = json.loads(msg["data"])
@@ -88,11 +97,14 @@ class AprilTagClient:
         poses_rot_y = [0] * 12  #y is the only rotation we care about
 
         # decode camera frame
-        frame = cv2.imdecode(base64.b64decode(encoded))
+        mat = np.frombuffer(base64.b64decode(encoded), np.uint8)
+        frame = cv2.imdecode(mat, cv2.IMREAD_COLOR)
 
         # Our operations on the frame come here
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         results = self.at_detector.detect(gray)
+
+        print("doing something?")
         
         tags_ID.clear()
         for idx, result in enumerate(results):
@@ -106,6 +118,8 @@ class AprilTagClient:
 
             tags_ID.append(result.getId())
 
+        print("after loop")
+
         tag_to_use = 0
 
         curr_local_x = 0.0
@@ -113,7 +127,10 @@ class AprilTagClient:
         curr_rotation = 0.0
         
         tag_rot = 700
+        print("right before loop!!!")
         for i in range(len(tags_ID)):
+            print("looping IDs...")
+
             #placeholder for loop
             if poses_rot_y[i] < tag_rot:
                 tag_to_use = i
@@ -139,9 +156,12 @@ class AprilTagClient:
             else:
                 continue
 
+        print("none found!")
         if tag_rot == 700:
             return
         
+        print("right before payload")
+
         curr_rotation = tag_rot + poses_rot_y[tag_to_use]
         if curr_rotation < 0:
             curr_rotation += 360
@@ -156,6 +176,8 @@ class AprilTagClient:
             "x_diff": 0.0, #FIXME
             "y_diff": 0.0
         }
+
+        print(payload)
 
         envelope = {
             "sender": self.constants["APRILTAG_NAME"],
@@ -190,6 +212,8 @@ def main():
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
     apriltag_client = AprilTagClient(f"{url}:{port}", constants)
+
+    apriltag_client.connect()
     
     # Start camera WS connection & loop
     try:

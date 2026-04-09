@@ -56,7 +56,7 @@ class CameraClient:
 
         envelope = {
             "sender": self.constants["APRILTAG_CAMERA_NAME"],
-            "destination": self.constants["APRILTAG_NAME"],
+            "destination": self.constants["APRILTAG_NAME"], #FIXME ALSO STREAM ON DRIVERSTATION???
             "data": json.dumps(payload)
         }
 

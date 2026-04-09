@@ -6,13 +6,13 @@ COMPETITION_SERVER_PORT = 1909 # this cannot change so easily, as it is hard-cod
 
 # for debugging/testing
 # LOCAL_SERVER_URL = "ws://192.168.1.66"
-LOCAL_SERVER_URL = "ws://192.168.8.187"
+LOCAL_SERVER_URL = "ws://192.168.1.93"
 LOCAL_SERVER_PORT = 1909
 
 # sort of like ROS topic names used by the relay_server to identify who to send messages to
 ROBOT_NAME = "robot"
 APRILTAG_NAME = "apriltag"
-APRILTAG_CAM_NAME = "apriltag_cam"
+APRILTAG_CAMERA_NAME = "apriltag_cam"
 DRIVER_CAMERA_NAME = "driver_cam"
 CONTROLLER_INPUT_NAME = "controller"
 GUI_NAME = "gui"
@@ -71,7 +71,7 @@ CAM_HEIGHT = 360
 CAM_FPS = 10.0 # desired send rate
 
 # apriltag camera
-APRILTAG_CAM_DEVICE_INDEX = 1 # /dev/video1
+APRILTAG_CAM_DEVICE_INDEX = 2 # /dev/video1 FIXME
 APRILTAG_JSON_PATH = "./Storm.json"
 APRILTAG_CAM_WIDTH = 640
 APRILTAG_CAM_HEIGHT = 480
