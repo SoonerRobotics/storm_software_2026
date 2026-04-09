@@ -147,6 +147,14 @@ class RobotClient:
         self.stop_event = threading.Event()
 
         self.controller_state = ControllerState()
+        self.last_controller_state  = ControllerState()
+
+        self.arm_poses = [constants["ARM_BASE_LOW"], constants["ARM_BASE_STOW"], constants["ARM_BASE_LOW"], constants["ARM_BASE_HIGH"], constants["ARM_BASE_CLIMB"]]
+        self.wrist_poses = [constants["WRIST_LEFT"], constants["WRIST_STOW"], constants["WRIST_RIGHT"]]
+        self.arm_index = 0
+        self.wrist_index = 1 # start in the middle
+        self.claw_toggle = False
+
         self.default_command = default_command
         self.robot_cmd = default_command
         self.robot_state = RobotState.TELEOP #FIXME only run tele-op for now while testing stuff
@@ -254,26 +262,30 @@ class RobotClient:
             cmd.intake_motor = 0.0
 
         # Arm: score high/low, grab battery, stow        
-        if s.dpad_top:
-            cmd.arm_servo_pos = constants["ARM_BASE_HIGH"]
-        elif s.dpad_bottom:
-            cmd.arm_servo_pos = constants["ARM_BASE_LOW"]
-        else:
-            pass #TODO FIXME?
+        if s.dpad_top and not self.last_controller_state.dpad_top and self.arm_index < (len(self.arm_poses - 1)):
+            self.arm_index += 1
+        elif s.dpad_bottom and not self.last_controller_state.dpad_bottom and self.arm_index > 0:
+            self.arm_index += 1
+        
+        cmd.arm_servo_pos = self.arm_poses[self.arm_index]
+
 
         # Wrist: score left/right, grab battery
-        if s.dpad_left:
-            cmd.wrist_servo_pos = constants["WRIST_LEFT"]
-        elif s.dpad_right:
-            cmd.wrist_servo_pos = constants["WRIST_RIGHT"]
-        else: #FIXME this is bad idea
-            cmd.wrist_servo_pos = constants["WRIST_PICK"]
+        if s.dpad_right and not self.last_controller_state.dpad_right and self.wrist_index < (len(self.wrist_poses - 1)):
+            self.wrist_index += 1
+        elif s.dpad_left and not self.last_controller_state.dpad_left and self.wrist_index > 0:
+            self.wrist_index += 1
+        
+        cmd.wrist_servo_pos = self.wrist_poses[self.wrist_index]
 
-        # Claw: open/close
-        if s.button_y:
-            cmd.claw_servo_pos = constants["CLAW_OPEN"] # release battery
-        elif s.button_a:
-            cmd.claw_servo_pos = constants["CLAW_CLOSED"] #TODO FIXME do we have to continuously keep this or will it stay if we only set it once (pico firmware?)
+        # Claw: open/close toggle
+        if s.button_a and not self.last_controller_state.button_a:
+            self.claw_toggle = not self.claw_toggle
+
+        if self.claw_toggle:
+            cmd.claw_servo_pos = constants["CLAW_OPEN"]
+        else:
+            cmd.claw_servo_pos = constants["CLAW_CLOSED"]
 
         # Linear arm extension
         if s.button_x:
@@ -284,12 +296,13 @@ class RobotClient:
             cmd.arm_extend_motor = constants["SLIDE_STOW_SPEED"]
 
         # Climber retract/extend
-        #TODO
+        
         cmd.climb_motor_speed = 0.0
 
         # Jumpstart voltage FIXME this just runs 100% of the time lol
         #TODO FIXME
 
+        # loss of signal checkb
         cmd.connected = self.connected_ws
 
         self.robot_cmd = cmd

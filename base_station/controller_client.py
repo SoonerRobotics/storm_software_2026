@@ -246,7 +246,6 @@ class ControllerClient:
 
         while not self.stop_event.is_set():
             pygame.event.pump()
-            # pygame.display.flip()
 
             if self.joystick:
                 with self.lock:
@@ -281,13 +280,12 @@ class ControllerClient:
                     s["dpad_top"] = self.joystick.get_dpad_top()
                     s["dpad_bottom"] = self.joystick.get_dpad_bottom()
 
-                    print()
-                    for key, value in s.items():
-                        print(f"{key}: {value}")
+                    # print debugging statement for figuring out actual button/axis numbers
+                    # print()
+                    # for key, value in s.items():
+                    #     print(f"{key}: {value}")
 
-                    
-
-            time.sleep(0.3) # 100 Hz update rate for polling
+            time.sleep(0.01) # 100 Hz update rate for polling
 
     # ----------------------------
     # Send loop
