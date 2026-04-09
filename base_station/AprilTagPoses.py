@@ -190,7 +190,15 @@ def main():
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
     apriltag_client = AprilTagClient(f"{url}:{port}", constants)
-    #FIXME how this start?
+    
+    # Start camera WS connection & loop
+    try:
+        while not apriltag_client.stop_event.is_set():
+            time.sleep(1)
+    except KeyboardInterrupt as e:
+        pass
+    finally:
+        apriltag_client.shutdown()
 
 if __name__ == "__main__":
     main()

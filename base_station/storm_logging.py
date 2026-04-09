@@ -31,6 +31,8 @@ class LoggingClient:
         self.video_writer = None
         #FIXME do we need a lock?
 
+        self.stop_event = threading.Event()
+
         self.t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 1, "ping_timeout": 0.5}, daemon=True)
         self.t.start()
         print(f"[Logging] Starting thread with ID {self.t.native_id}")
@@ -51,7 +53,7 @@ class LoggingClient:
                 case 30:
                     # if it's a like, "start match" message we should start a new file
                     # filename is like, date and time .csv
-                    # need to do like an os.makedirs()
+                    # os.makedirs(self.filename) #????
                     pass
                 case 31:
                     # match start message, one field "timestamp" unsigned long for the start of the match?
@@ -96,9 +98,14 @@ class LoggingClient:
 
             self.file = None
             self.writer = None
+        
+        self.stop_event.set()
     
     def on_error(self, ws, error):
         print(f"[Logging] WS error: {error}")
+
+    def shutdown(self):
+        self.on_close(self.ws, "", "keyboard interrupt")
 
 def main():
     with open("../constants.toml", "rb") as const_file:
@@ -113,4 +120,13 @@ def main():
 
     logger = LoggingClient(f"{url}:{port}", constants["LOGGING_PATH"])
 
-    #FIXME might need a while True and stop event and stuff down here too
+    try:
+        while not logger.stop_event.is_set():
+            time.sleep(1)
+    except KeyboardInterrupt as e:
+        pass
+    finally:
+        logger.shutdown()
+
+if __name__ == "__main__":
+    main()

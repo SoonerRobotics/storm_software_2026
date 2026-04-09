@@ -27,4 +27,4 @@ cmake --build .
 
 # install python dependencies
 echo "Installing python packages..."
-pip3 install opencv-python websocket-client pygame
+pip3 install opencv-python websocket-client pygame psutil robotpy-apriltag scipy

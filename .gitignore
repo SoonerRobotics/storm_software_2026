@@ -11,3 +11,5 @@
 AprilTagTesting/
 
 **/__pycache__
+
+**/venv
