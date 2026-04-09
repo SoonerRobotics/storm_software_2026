@@ -82,6 +82,7 @@ class XboxOneController:
         return self.joy.get_hat(0)[1] == 1
 
 # button bindings for Xbox One bluetooth controller when connected to Linux
+# THIS IS THE ONE WE WILL BE ACTUALLY USING AT COMPETITION
 class LinuxXboxOneController:
     def __init__(self, idx=0):
         self.joy = pygame.joystick.Joystick(idx)
@@ -94,16 +95,16 @@ class LinuxXboxOneController:
         return self.joy.get_axis(1)
 
     def get_right_stick_x(self) -> float:
-        return self.joy.get_axis(2)
-
-    def get_right_stick_y(self) -> float:
         return self.joy.get_axis(3)
 
+    def get_right_stick_y(self) -> float:
+        return self.joy.get_axis(2)
+
     def get_trigger_left(self) -> float:
-        return self.joy.get_axis(5) #FIXME
+        return (self.joy.get_axis(5) + 1)/2
 
     def get_trigger_right(self) -> float:
-        return self.joy.get_axis(4) #FIXME
+        return (self.joy.get_axis(4) + 1)/2
 
     def get_button_a(self) -> bool:
         return self.joy.get_button(0)
@@ -121,26 +122,23 @@ class LinuxXboxOneController:
         return self.joy.get_button(6)
 
     def get_button_right_bumper(self) -> bool:
-        return self.joy.get_button(5)
-
-    def get_button_center(self) -> bool:
-        return self.joy.get_button(11)
-        return False #FIXME idk why but pygame says these are invalid buttons???
-
-    def get_button_left(self) -> bool:
         return self.joy.get_button(7)
 
+    def get_button_center(self) -> bool:
+        return self.joy.get_button(12)
+        
+    def get_button_left(self) -> bool:
+        return self.joy.get_button(10)
+
     def get_button_right(self) -> bool:
-        return self.joy.get_button(8)
+        return self.joy.get_button(11)
 
     def get_left_stick_button(self) -> bool:
-        return self.joy.get_button(9)
-        return False #FIXME idk why but pygame says these are invalid buttons???
-
+        return self.joy.get_button(13)
+        
     def get_right_stick_button(self) -> bool:
-        return self.joy.get_button(10)
-        return False #FIXME idk why but pygame says these are invalid buttons???
-
+        return self.joy.get_button(14)
+        
     def get_dpad_left(self) -> bool:
         return self.joy.get_hat(0)[0] == -1
 
@@ -148,10 +146,10 @@ class LinuxXboxOneController:
         return self.joy.get_hat(0)[0] == 1
 
     def get_dpad_top(self) -> bool:
-        return self.joy.get_hat(0)[1] == -1
+        return self.joy.get_hat(0)[1] == 1
 
     def get_dpad_bottom(self) -> bool:
-        return self.joy.get_hat(0)[1] == 1
+        return self.joy.get_hat(0)[1] == -1
 
 # ----------------------------
 # Controller Client Class
@@ -283,7 +281,13 @@ class ControllerClient:
                     s["dpad_top"] = self.joystick.get_dpad_top()
                     s["dpad_bottom"] = self.joystick.get_dpad_bottom()
 
-            time.sleep(0.01) # 100 Hz update rate for polling
+                    print()
+                    for key, value in s.items():
+                        print(f"{key}: {value}")
+
+                    
+
+            time.sleep(0.3) # 100 Hz update rate for polling
 
     # ----------------------------
     # Send loop
