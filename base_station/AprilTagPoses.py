@@ -9,6 +9,7 @@ import time
 import threading
 import websocket
 import tomllib
+import base64
 
 constants = {}
 
@@ -70,78 +71,32 @@ class AprilTagClient:
     def on_error(self, ws, error):
         print("[AprilTag] WS error:", error)
 
-    def send_msg(self, ids: List[int], x: float, y: float, heading: float, x_diff: int, y_diff: int):
+    def on_message(self, ws, raw):
         if not self.connected:
             return
         
-        payload = {
-            "id": 141,
-            "ts": time.time(),
-            "ids": ids,
-            "x": x,
-            "y": y,
-            "heading": heading,
-            "x_diff": x_diff,
-            "y_diff": y_diff
-        }
-
-        envelope = {
-            "sender": self.constants["DRIVER_CAMERA_NAME"],
-            "destination": self.constants["GUI_NAME"], #FIXME we should send to the robot as well
-            "data": json.dumps(payload)
-        }
-
-        if self.ws is not None:
-            try:
-                self.ws.send(json.dumps(envelope))
-            except Exception as e:
-                print(f"[AprilTag] send error: {e}")
-
-    def shutdown(self):
-        self.stop_event.set()
-    
-        if self.ws is not None:
-            try:
-                self.ws.close()
-            except:
-                pass
-
-def camera_loop(cam_client: AprilTagClient):
-    cap = cv2.VideoCapture(cam_client.constants["APRILTAG_CAM_DEVICE_INDEX"])
-    if not cap.isOpened():
-        print("[AprilTag] Failed to open camera")
-        return
-
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_client.constants["APRILTAG_CAM_WIDTH"])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_client.constants["APRILTAG_CAM_HEIGHT"])
-    cap.set(cv2.CAP_PROP_FPS, cam_client.constants["APRILTAG_CAM_FPS"])
-
-    cap = cv2.VideoCapture(cam_client.constants["APRILTAG_CAM_DEVICE_INDEX"])
-    if not cap.isOpened():
-        print("[AprilTag] Cannot open camera")
-        exit()
-
-    while not cam_client.stop_event.is_set():
-        ret, frame = cap.read()
-        if not ret:
-            time.sleep(0.1)
-            continue
-
-        #FIXME check if we need to do this
-        #frame = cv2.rotate(frame, cv2.ROTATE_180)
+        msg = json.loads(raw)
+        if msg.get("destination") != constants["APRTAG_NAME"]:
+            return
+        
+        payload = json.loads(msg["data"])
+        encoded = payload.get("frame_b64")
 
         tags_ID = []
         poses_x = [0] * 12 # Empty space for poses
         poses_z = [0] * 12
         poses_rot_y = [0] * 12  #y is the only rotation we care about
 
+        # decode camera frame
+        frame = cv2.imdecode(base64.b64decode(encoded))
+
         # Our operations on the frame come here
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        results = cam_client.at_detector.detect(gray)
+        results = self.at_detector.detect(gray)
         
         tags_ID.clear()
         for idx, result in enumerate(results):
-            pose = cam_client.estimator.estimate(result)
+            pose = self.estimator.estimate(result)
 
             # x is horizontal z is depth
             poses_x[idx] = pose.X() * 39.37008 # Convert to inches
@@ -164,23 +119,23 @@ def camera_loop(cam_client: AprilTagClient):
                 tag_to_use = i
 
             # field rotation of the tag
-            tag_rot = cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["rotation"]
+            tag_rot = self.field["tags"][tags_ID[tag_to_use]]["pose"]["rotation"]
 
             if tag_rot == 0:
-                curr_local_x += cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["x"] - poses_x[tag_to_use]
-                curr_local_y += cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["y"] - poses_z[tag_to_use]
+                curr_local_x += self.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["x"] - poses_x[tag_to_use]
+                curr_local_y += self.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["y"] - poses_z[tag_to_use]
 
             elif tag_rot == 90:
-                curr_local_x += cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["x"] - poses_z[tag_to_use]
-                curr_local_y += cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["y"] + poses_x[tag_to_use]
+                curr_local_x += self.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["x"] - poses_z[tag_to_use]
+                curr_local_y += self.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["y"] + poses_x[tag_to_use]
 
             elif tag_rot == 180:
-                curr_local_x += cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["x"] + poses_x[tag_to_use]
-                curr_local_y += cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["y"] + poses_z[tag_to_use]
+                curr_local_x += self.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["x"] + poses_x[tag_to_use]
+                curr_local_y += self.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["y"] + poses_z[tag_to_use]
 
             elif tag_rot == 270:
-                curr_local_x += cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["x"] + poses_z[tag_to_use]
-                curr_local_y += cam_client.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["y"] - poses_x[tag_to_use]
+                curr_local_x += self.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["x"] + poses_z[tag_to_use]
+                curr_local_y += self.field["tags"][tags_ID[tag_to_use]]["pose"]["translation"]["y"] - poses_x[tag_to_use]
             else:
                 continue
 
@@ -190,40 +145,52 @@ def camera_loop(cam_client: AprilTagClient):
         curr_rotation = tag_rot + poses_rot_y[tag_to_use]
         if curr_rotation < 0:
             curr_rotation += 360
+        
+        payload = {
+            "id": 141,
+            "ts": time.time(),
+            "ids": tags_ID[tag_to_use],
+            "x": curr_local_x,
+            "y": curr_local_y,
+            "heading": curr_rotation,
+            "x_diff": 0.0, #FIXME
+            "y_diff": 0.0
+        }
 
-        cam_client.send_msg(curr_local_x, curr_local_y, curr_rotation, tags_ID[tag_to_use], 0, 0)
+        envelope = {
+            "sender": self.constants["APRILTAG_NAME"],
+            "destination": self.constants["GUI_NAME"], #FIXME we should send to the robot as well
+            "data": json.dumps(payload)
+        }
 
-        time.sleep(1.0 / cam_client.constants["APRILTAG_CAM_FPS"])
+        if self.ws is not None:
+            try:
+                self.ws.send(json.dumps(envelope))
+            except Exception as e:
+                print(f"[AprilTag] send error: {e}")
 
-    cap.release()
-    print("[AprilTag] Loop ended")
+    def shutdown(self):
+        self.stop_event.set()
+    
+        if self.ws is not None:
+            try:
+                self.ws.close()
+            except:
+                pass
 
 def main():
     with open("../constants.toml", "rb") as const_file:
         try:
             constants = tomllib.load(const_file)
         except Exception as e:
-            print("[Robot] Failed to read constants file")
+            print("[AprilTag] Failed to read constants file")
             raise SystemExit
     
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
     apriltag_client = AprilTagClient(f"{url}:{port}", constants)
-
-    # Start camera WS connection & loop
-    apriltag_client.connect()
-    apriltag_thread = threading.Thread(target=camera_loop, args=(apriltag_client,), daemon=True)
-    apriltag_thread.start()
-    print(print(f"Starting AprilTag thread with ID: {apriltag_thread.native_id}"))
-
-    try:
-        while not apriltag_client.stop_event.is_set():
-            time.sleep(1)
-    except KeyboardInterrupt as e:
-        pass
-    finally:
-        apriltag_client.shutdown()
+    #FIXME how this start?
 
 if __name__ == "__main__":
     main()

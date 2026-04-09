@@ -12,6 +12,7 @@ LOCAL_SERVER_PORT = 1909
 # sort of like ROS topic names used by the relay_server to identify who to send messages to
 ROBOT_NAME = "robot"
 APRILTAG_NAME = "apriltag"
+APRILTAG_CAM_NAME = "apriltag_cam"
 DRIVER_CAMERA_NAME = "driver_cam"
 CONTROLLER_INPUT_NAME = "controller"
 GUI_NAME = "gui"
