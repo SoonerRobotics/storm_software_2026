@@ -50,8 +50,8 @@ SLIDE_RETRACT_SPEED = -0.2
 SLIDE_STOW_SPEED = 0.0 # stow speed is 0 because motor keeps it where it is anyways
 
 # intake speed (intake off speed is 0.0, naturally)
-INTAKE_IN_SPEED = 0.6
-INTAKE_OUT_SPEED = -0.5
+INTAKE_IN_SPEED = -0.5
+INTAKE_OUT_SPEED = 0.5
 
 # climber speeds
 CLIMB_SPEED = 1.0

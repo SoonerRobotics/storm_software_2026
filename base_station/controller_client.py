@@ -88,21 +88,6 @@ class LinuxXboxOneController:
         self.joy = pygame.joystick.Joystick(idx)
         self.joy.init()
 
-        self.debounce_seconds = 0.01
-    
-    # debounce a button 'cause it's kinda bad
-    def debounce(self, curr_val, last_val, last_time):
-        # on a change
-        if curr_val is not last_val:
-            # if it hasn't been long enough
-            if (time.time() - last_time) < self.debounce_seconds:
-                return last_val, last_time # don't change it
-            else:
-                # otherwise then it has been long enough
-                return curr_val, time.time() # on an edge
-
-        return curr_val, last_time
-
     def get_left_stick_x(self) -> float:
         return self.joy.get_axis(0)
 
@@ -121,52 +106,50 @@ class LinuxXboxOneController:
     def get_trigger_right(self) -> float:
         return (self.joy.get_axis(4) + 1)/2
 
-    def get_button_a(self, last_val, last_time) -> bool:
-        x, y = self.debounce(self.joy.get_button(0), last_val, last_time)
-        # print(x)
-        return x, y
+    def get_button_a(self) -> bool:
+        return self.joy.get_button(0)
 
-    def get_button_b(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(1), last_val, last_time)
+    def get_button_b(self) -> bool:
+        return self.joy.get_button(1)
 
-    def get_button_x(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(3), last_val, last_time)
+    def get_button_x(self) -> bool:
+        return self.joy.get_button(3)
 
-    def get_button_y(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(4), last_val, last_time)
+    def get_button_y(self) -> bool:
+        return self.joy.get_button(4)
 
-    def get_button_left_bumper(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(6), last_val, last_time)
+    def get_button_left_bumper(self) -> bool:
+        return self.joy.get_button(6)
 
-    def get_button_right_bumper(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(7), last_val, last_time)
+    def get_button_right_bumper(self) -> bool:
+        return self.joy.get_button(7)
 
-    def get_button_center(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(12), last_val, last_time)
+    def get_button_center(self) -> bool:
+        return self.joy.get_button(12)
         
-    def get_button_left(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(10), last_val, last_time)
+    def get_button_left(self) -> bool:
+        return self.joy.get_button(10)
 
-    def get_button_right(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(11), last_val, last_time)
+    def get_button_right(self) -> bool:
+        return self.joy.get_button(11)
 
-    def get_left_stick_button(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(13), last_val, last_time)
+    def get_left_stick_button(self) -> bool:
+        return self.joy.get_button(13)
         
-    def get_right_stick_button(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_button(14), last_val, last_time)
+    def get_right_stick_button(self) -> bool:
+        return self.joy.get_button(14)
         
-    def get_dpad_left(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_hat(0)[0] == -1, last_val, last_time)
+    def get_dpad_left(self) -> bool:
+        return self.joy.get_hat(0)[0] == -1
 
-    def get_dpad_right(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_hat(0)[0] == 1, last_val, last_time)
+    def get_dpad_right(self) -> bool:
+        return self.joy.get_hat(0)[0] == 1
 
-    def get_dpad_top(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_hat(0)[1] == 1, last_val, last_time)
+    def get_dpad_top(self) -> bool:
+        return self.joy.get_hat(0)[1] == 1
 
-    def get_dpad_bottom(self, last_val, last_time) -> bool:
-        return self.debounce(self.joy.get_hat(0)[1] == -1, last_val, last_time)
+    def get_dpad_bottom(self) -> bool:
+        return self.joy.get_hat(0)[1] == -1
 
 # ----------------------------
 # Controller Client Class
@@ -183,32 +166,6 @@ class ControllerClient:
         self.lock = threading.Lock()
         self.stop_event = threading.Event()
         self.controller_state = self.default_state()
-        self.last_controller_state = self.default_state()
-
-        self.last_times = {
-            "id": 10,
-            "left_stick_x": 0.0,
-            "left_stick_y": 0.0,
-            "right_stick_x": 0.0,
-            "right_stick_y": 0.0,
-            "left_stick_button": 0.0,
-            "right_stick_button": 0.0,
-            "button_a": 0.0,
-            "button_b": 0.0,
-            "button_x": 0.0,
-            "button_y": 0.0,
-            "button_left_bumper": 0.0,
-            "button_right_bumper": 0.0,
-            "button_center": 0.0,
-            "button_left": 0.0,
-            "button_right": 0.0,
-            "dpad_top": 0.0,
-            "dpad_left": 0.0,
-            "dpad_right": 0.0,
-            "dpad_bottom": 0.0,
-            "trigger_left": 0.0,
-            "trigger_right": 0.0
-        }
 
         self.joystick = None 
 
@@ -294,7 +251,6 @@ class ControllerClient:
             if self.joystick:
                 with self.lock:
                     s = self.controller_state
-                    last_times = self.last_times.copy()
                     # Get Axis values (Sticks/Triggers)
                     try: 
                         s["left_stick_x"] = self.joystick.get_left_stick_x()
@@ -307,26 +263,23 @@ class ControllerClient:
                         pass 
 
                     # Get Button values (mapping varies by OS/Controller)
-                    s["button_a"], last_times["button_a"] = self.joystick.get_button_a(self.last_controller_state["button_a"], self.last_times["button_a"])
-                    s["button_b"], last_times["button_b"] = self.joystick.get_button_b(self.last_controller_state["button_b"], self.last_times["button_b"])
-                    s["button_x"], last_times["button_x"] = self.joystick.get_button_x(self.last_controller_state["button_x"], self.last_times["button_x"])
-                    s["button_y"], last_times["button_y"] = self.joystick.get_button_y(self.last_controller_state["button_y"], self.last_times["button_y"])
-                    s["button_left_bumper"], last_times["button_left_bumper"] = self.joystick.get_button_left_bumper(self.last_controller_state["button_left_bumper"], self.last_times["button_left_bumper"])
-                    s["button_right_bumper"], last_times["button_right_bumper"] = self.joystick.get_button_right_bumper(self.last_controller_state["button_right_bumper"], self.last_times["button_right_bumper"])
-                    s["button_center"], last_times["button_center"] = self.joystick.get_button_center(self.last_controller_state["button_center"], self.last_times["button_center"])
-                    s["button_left"], last_times["button_left"] = self.joystick.get_button_left(self.last_controller_state["button_left"], self.last_times["button_left"])
-                    s["button_right"], last_times["button_right"] = self.joystick.get_button_right(self.last_controller_state["button_right"], self.last_times["button_right"])
-                    s["left_stick_button"], last_times["left_stick_button"] = self.joystick.get_left_stick_button(self.last_controller_state["left_stick_button"], self.last_times["left_stick_button"])
-                    s["right_stick_button"], last_times["right_stick_button"] = self.joystick.get_right_stick_button(self.last_controller_state["right_stick_button"], self.last_times["right_stick_button"])
+                    s["button_a"] = self.joystick.get_button_a()
+                    s["button_b"] = self.joystick.get_button_b()
+                    s["button_x"] = self.joystick.get_button_x()
+                    s["button_y"] = self.joystick.get_button_y()
+                    s["button_left_bumper"] = self.joystick.get_button_left_bumper()
+                    s["button_right_bumper"] = self.joystick.get_button_right_bumper()
+                    s["button_center"] = self.joystick.get_button_center()
+                    s["button_left"] = self.joystick.get_button_left()
+                    s["button_right"] = self.joystick.get_button_right()
+                    s["left_stick_button"] = self.joystick.get_left_stick_button()
+                    s["right_stick_button"] = self.joystick.get_right_stick_button()
 
                     # Get DPad values (Hat/POV)
-                    s["dpad_left"], last_times["dpad_left"] = self.joystick.get_dpad_left(self.last_controller_state["dpad_left"], self.last_times["dpad_left"])
-                    s["dpad_right"], last_times["dpad_right"] = self.joystick.get_dpad_right(self.last_controller_state["dpad_right"], self.last_times["dpad_right"])
-                    s["dpad_top"], last_times["dpad_top"] = self.joystick.get_dpad_top(self.last_controller_state["dpad_top"], self.last_times["dpad_top"])
-                    s["dpad_bottom"], last_times["dpad_bottom"] = self.joystick.get_dpad_bottom(self.last_controller_state["dpad_bottom"], self.last_times["dpad_bottom"])
-
-                    self.last_controller_state = s.copy()
-                    self.last_times = last_times.copy()
+                    s["dpad_left"] = self.joystick.get_dpad_left()
+                    s["dpad_right"] = self.joystick.get_dpad_right()
+                    s["dpad_top"] = self.joystick.get_dpad_top()
+                    s["dpad_bottom"] = self.joystick.get_dpad_bottom()
 
                     # print debugging statement for figuring out actual button/axis numbers
                     # print()

@@ -281,7 +281,7 @@ class RobotClient:
             # update controller state for robot control
             elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
                 with self.lock:
-                    self.last_controller_state = self.controller_state
+                    self.last_controller_state = copy.copy(self.controller_state)
 
                     self.controller_state.left_stick_x = payload.get("left_stick_x")
                     self.controller_state.left_stick_y = payload.get("left_stick_y")
