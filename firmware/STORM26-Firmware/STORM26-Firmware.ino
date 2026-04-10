@@ -186,16 +186,16 @@ void loop() {
       strip.show();
     }
   // put your main code here, to run repeatedly:
-  if (Serial.available() >= 14) {
+  if (Serial.available() >= 15) {
     // digitalWrite(LED_PIN, HIGH);
-    Serial.readBytes(data, 14);
+    Serial.readBytes(data, 15);
 
     lastTime = millis();
     timed_out = false;
   }
 
   if((data[0] == '$') && (data[13] == '!') && !timed_out) {
-    connected = data[12]; // for loss of signal
+    connected = data[13]; // for loss of signal
     
     if (connected) {
       if (!hasEverBeenConnected) {
@@ -225,9 +225,10 @@ void loop() {
       analogWrite(CLAW_1, data[8]);
       analogWrite(CLAW_2, data[9]);
       analogWrite(CLIMBER, data[10]);
+      analogWrite(CHARGE, data[11]);
       
       // jumpstart stuff
-      adjustVoltage(data[11]);
+      adjustVoltage(data[12]);
 
       digitalWrite(LED_PIN, LOW);
     }
@@ -243,22 +244,25 @@ void loop() {
     digitalWrite(SE_DRV, LOW);
     digitalWrite(SLIDE, LOW);
     digitalWrite(INTAKE, LOW);
+    digitalWrite(CLIMBER, LOW); //FIXME do we want to continually climb?
+    digitalWrite(CHARGE, LOW);
 
     // if we timeout but we've been connected, then its an LOS and we need to not move at all
     if (hasEverBeenConnected) {
-      digitalWrite(CLAW_1, LOW); //FIXME servos should go to their STOW positions
-      digitalWrite(CLAW_2, LOW); // make sure to keep up to date with constants.toml
+      // turn arm off so it doesn't fight the climbing thingamajig
       digitalWrite(EXTRA_2, LOW);
     } else {
-      analogWrite(CLAW_1, WRIST_DEFAULT); //FIXME servos should go to their STOW positions
-      analogWrite(CLAW_2, CLAW_DEFAULT); // make sure to keep up to date with constants.toml
       analogWrite(EXTRA_2, ARM_DEFAULT);
     }
+
+    // these don't work right when digitally written to 0 so
+    analogWrite(CLAW_1, WRIST_DEFAULT);
+    analogWrite(CLAW_2, CLAW_DEFAULT);
   
     digitalWrite(CLIMBER, LOW);
-    // analogWrite(CHARGE, data[11]); // no charging wheel, in software packet this is actually jumpstart...
     
     //TODO turn off jumpstart?
+
     connected = false;
 
     digitalWrite(LED_PIN, HIGH);

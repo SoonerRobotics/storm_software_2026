@@ -93,7 +93,7 @@ class AprilTagClient:
             return
         
         payload = json.loads(msg["data"])
-        if payload.get("id") != 131:
+        if payload.get("id") != 140:
             return
 
         encoded = payload.get("frame_b64")

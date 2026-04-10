@@ -95,10 +95,10 @@ class LinuxXboxOneController:
         return self.joy.get_axis(1)
 
     def get_right_stick_x(self) -> float:
-        return self.joy.get_axis(3)
+        return self.joy.get_axis(2)
 
     def get_right_stick_y(self) -> float:
-        return self.joy.get_axis(2)
+        return self.joy.get_axis(3)
 
     def get_trigger_left(self) -> float:
         return (self.joy.get_axis(5) + 1)/2

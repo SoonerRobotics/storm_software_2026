@@ -49,7 +49,7 @@ class CameraClient:
         # base64-encode JPEG for easier handling on the UI side
         b64 = base64.b64encode(jpg_bytes).decode("ascii")
         payload = {
-            "id": 131,
+            "id": 140,
             "ts": time.time(),
             "frame_b64": b64
         }

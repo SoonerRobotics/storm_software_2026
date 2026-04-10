@@ -67,6 +67,8 @@ class RobotCommand:
     
     climb_motor_speed: float = 0.0
 
+    charge_motor_speed: float = 0.0
+
     jumpstart_voltage: int = 0
 
     connected: bool = False # for loss-of-signal
@@ -185,7 +187,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
 
     #FIXME is it supposed to be little or big endian?
     msg = struct.pack(
-        ">c12Bc",
+        ">c13Bc",
         bytes(constants["START_BYTE"], 'ascii'),
         scale_motor_speed(cmd.left_front_drive_motor),
         scale_motor_speed(cmd.left_back_drive_motor),
@@ -197,6 +199,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
         scale_servo_pos(cmd.wrist_servo_pos),
         scale_servo_pos(cmd.claw_servo_pos),
         scale_motor_speed(cmd.climb_motor_speed),
+        scale_motor_speed(cmd.charge_motor_speed),
         cmd.jumpstart_voltage,
         cmd.connected,
         bytes(constants["END_BYTE"], 'ascii')
@@ -438,6 +441,9 @@ class RobotClient:
 
         # Jumpstart voltage FIXME this just runs 100% of the time lol
         cmd.jumpstart_voltage = 6
+
+        # Charging wheel speed FIXME this just runs 100% of the time lol and also can't be controlled
+        cmd.charge_motor_speed = 0.5
 
         # loss of signal checkb
         cmd.connected = self.connected_ws
