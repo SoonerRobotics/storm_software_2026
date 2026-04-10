@@ -149,20 +149,20 @@ class ArmState(Enum):
 
 # ======== Autonomous Programs ========
 driveForwards = RobotCommand()
-driveForwards.left_front_drive_motor,  \
-driveForwards.right_front_drive_motor, \
-driveForwards.left_back_drive_motor,   \
-driveForwards.right_back_drive_motor = mecanum_blend(0.4, 0.0, 0.0)
+# driveForwards.left_front_drive_motor,  \
+# driveForwards.right_front_drive_motor, \
+# driveForwards.left_back_drive_motor,   \
+# driveForwards.right_back_drive_motor = mecanum_blend(0.4, 0.0, 0.0)
 
 extendSlide = RobotCommand()
-extendSlide.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
+# extendSlide.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
 
 flipWrist = RobotCommand()
-flipWrist.wrist_servo_pos = constants["WRIST_LEFT"]
+# flipWrist.wrist_servo_pos = constants["WRIST_LEFT"]
 
 # need to keep wrist at same position (idk if this is even worth it?)
 openClaw = copy.copy(flipWrist)
-openClaw.claw_servo_pos = constants["CLAW_OPEN"]
+# openClaw.claw_servo_pos = constants["CLAW_OPEN"]
 
 DriveForwardAutonomous = AutonomousSequence([
     TimedRobotCommand(driveForwards, 5.0), # 5 seconds
@@ -334,20 +334,20 @@ class RobotClient:
         else:
             cmd.intake_motor = 0.0
 
-        # Arm: score high/low, grab battery, stow        
-        if s.dpad_top and not self.last_controller_state.dpad_top and self.arm_index < (len(self.arm_poses - 1)):
+        # Arm: score high/low, grab battery, stow
+        if s.dpad_top and not self.last_controller_state.dpad_top and self.arm_index < (len(self.arm_poses) - 1):
             self.arm_index += 1
         elif s.dpad_bottom and not self.last_controller_state.dpad_bottom and self.arm_index > 0:
-            self.arm_index += 1
+            self.arm_index -= 1
         
         cmd.arm_servo_pos = self.arm_poses[self.arm_index]
 
 
         # Wrist: score left/right, grab battery
-        if s.dpad_right and not self.last_controller_state.dpad_right and self.wrist_index < (len(self.wrist_poses - 1)):
+        if s.dpad_right and not self.last_controller_state.dpad_right and self.wrist_index < (len(self.wrist_poses) - 1):
             self.wrist_index += 1
         elif s.dpad_left and not self.last_controller_state.dpad_left and self.wrist_index > 0:
-            self.wrist_index += 1
+            self.wrist_index -= 1
         
         cmd.wrist_servo_pos = self.wrist_poses[self.wrist_index]
 
@@ -375,7 +375,7 @@ class RobotClient:
             cmd.climb_motor_speed = 0.0 #FIXME we might need to run it backwards too? maybe?
 
         # Jumpstart voltage FIXME this just runs 100% of the time lol
-        #TODO FIXME
+        cmd.jumpstart_voltage = 2
 
         # loss of signal checkb
         cmd.connected = self.connected_ws
@@ -452,7 +452,7 @@ if __name__ == "__main__":
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
-    robot = RobotClient(f"{url}:{port}", default_robot_command)
+    robot = RobotClient(f"{url}:{port}", default_robot_command, [DriveForwardAutonomous, ScoreOneAutonomous])
 
     try:
         robot.run()
