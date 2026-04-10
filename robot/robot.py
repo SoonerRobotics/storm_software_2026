@@ -329,9 +329,11 @@ class RobotClient:
         cmd = self.robot_cmd
         
         # Drive (mecanum)
+        #First check if alignment button is pressed
         if s.right_stick_button:
             rot_dir = 0
-            trans_amt = 0 
+            hor_amt = 0 
+            dep_amt = 0
             
             #Rotate to face tag
             while True:
@@ -340,10 +342,11 @@ class RobotClient:
                 cmd.left_back_drive_motor,   \
                 cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, rot_dir)###
                 if self.camera_rot < -3:
-                    rot_dir = 1.0 #Change this to be more real rotation (idk what good numbers are)
+                    rot_dir = 0.2 #Change this to be more real rotation (idk what good numbers are)
                 elif self.camera_rot > 3:
-                    rot_dir = -1.0 #Change this to be more real rotation (idk what good numbers are)
+                    rot_dir = -0.2 #Change this to be more real rotation (idk what good numbers are)
                 else:
+                    rot_dir = 0
                     break
             
             #Center to tag
@@ -351,12 +354,27 @@ class RobotClient:
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
                 cmd.left_back_drive_motor,   \
-                cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, trans_amt, s.right_stick_x)###
+                cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, hor_amt, s.right_stick_x)###
                 if self.camera_x_diff > 0.5:
-                    trans_amt = 1.0 #Change this to be more real translation (idk what good numbers are)
+                    hor_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
                 elif self.camera_x_diff < -0.5:
-                    trans_amt = -1.0 #Change this to be more real rotation (idk what good numbers are)
+                    hor_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
                 else:
+                    hor_amt = 0
+                    break
+                #17.5
+            #Depth Alignment
+            while True:
+                cmd.left_front_drive_motor,  \
+                cmd.right_front_drive_motor, \
+                cmd.left_back_drive_motor,   \
+                cmd.right_back_drive_motor = mecanum_blend(dep_amt, s.left_stick_x, s.right_stick_x)
+                if self.camera_y_diff < 17.5:
+                    dep_amt = -0.2 #Change this to be more real translation (idk what good numbers are)
+                elif self.camera_y_diff > 17.5:
+                    dep_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
+                else:
+                    dep_amt = 0
                     break
         else:
             cmd.left_front_drive_motor,  \
