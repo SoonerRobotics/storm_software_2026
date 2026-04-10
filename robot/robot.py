@@ -222,9 +222,9 @@ class RobotClient:
         self.controller_state = ControllerState()
         self.last_controller_state  = ControllerState()
 
-        self.arm_poses = [constants["ARM_BASE_LOW"], constants["ARM_BASE_STOW"], constants["ARM_BASE_LOW"], constants["ARM_BASE_HIGH"], constants["ARM_BASE_CLIMB"]]
+        self.arm_poses = [constants["ARM_BASE_PICK"], constants["ARM_BASE_STOW"], constants["ARM_BASE_LOW"], constants["ARM_BASE_HIGH"], constants["ARM_BASE_CLIMB"]]
         self.wrist_poses = [constants["WRIST_LEFT"], constants["WRIST_STOW"], constants["WRIST_RIGHT"]]
-        self.arm_index = 0
+        self.arm_index = 1 # start in the middle
         self.wrist_index = 1 # start in the middle
         self.claw_toggle = False
 
