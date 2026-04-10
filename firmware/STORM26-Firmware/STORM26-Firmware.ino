@@ -62,6 +62,7 @@ unsigned long lastTime = 0;
 // loss-of-serial / loss-of-signal
 bool timed_out = false;
 bool connected = false;
+bool hasEverBeenConnected = false;
 
 // Main Control Function
 void adjustVoltage(int target) {
@@ -121,7 +122,7 @@ void adjustVoltage(int target) {
     currentWiper = 127;
   } 
 
-  // ds3502.setWiper(currentWiper);
+  ds3502.setWiper(currentWiper);
 }
 
 void setup() {
@@ -153,18 +154,17 @@ void setup() {
 
   Serial.begin(115200);
 
-  // Wire1.setSCL(SCL);
-  // Wire1.setSDA(SDA);
-  // Wire1.begin();
+  Wire1.setSCL(SCL);
+  Wire1.setSDA(SDA);
+  Wire1.begin();
   
-  //FIXME idk if we want to include this here
-  // if (!ds3502.begin(40, &Wire1)) {
-    // while (1)
-      // ;
-  // }
+  if (!ds3502.begin(40, &Wire1)) {
+    while (1)
+      ;
+  }
 
   // ds3502.begin(40, &Wire1);
-  // ds3502.setWiper(25);
+  ds3502.setWiper(25);
 
   strip.begin();
   strip.setBrightness(current_brightness);
@@ -198,6 +198,9 @@ void loop() {
     connected = data[12]; // for loss of signal
     
     if (connected) {
+      if (!hasEverBeenConnected) {
+        hasEverBeenConnected = true;
+      }
       
       analogWrite(NW_DRV, data[1]);
       analogWrite(SW_DRV, data[2]);
@@ -241,10 +244,17 @@ void loop() {
     digitalWrite(SLIDE, LOW);
     digitalWrite(INTAKE, LOW);
 
-    analogWrite(CLAW_1, WRIST_DEFAULT); //FIXME servos should go to their STOW positions
-    analogWrite(CLAW_2, CLAW_DEFAULT); // make sure to keep up to date with constants.toml
-    analogWrite(EXTRA_2, ARM_DEFAULT);
-    
+    // if we timeout but we've been connected, then its an LOS and we need to not move at all
+    if (hasEverBeenConnected) {
+      digitalWrite(CLAW_1, LOW); //FIXME servos should go to their STOW positions
+      digitalWrite(CLAW_2, LOW); // make sure to keep up to date with constants.toml
+      digitalWrite(EXTRA_2, LOW);
+    } else {
+      analogWrite(CLAW_1, WRIST_DEFAULT); //FIXME servos should go to their STOW positions
+      analogWrite(CLAW_2, CLAW_DEFAULT); // make sure to keep up to date with constants.toml
+      analogWrite(EXTRA_2, ARM_DEFAULT);
+    }
+  
     digitalWrite(CLIMBER, LOW);
     // analogWrite(CHARGE, data[11]); // no charging wheel, in software packet this is actually jumpstart...
     
