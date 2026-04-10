@@ -176,8 +176,9 @@ class AprilTagClient:
             "x": curr_local_x,
             "y": curr_local_y,
             "heading": curr_rotation,
-            "x_diff": 0.0, #FIXME
-            "y_diff": 0.0
+            "x_diff": poses_x[tag_to_use] - 3, #3 is for camera offset from center
+            "y_diff": poses_z[tag_to_use], 
+            "rot": poses_rot_y[tag_to_use]
         }
 
         print(payload)
