@@ -193,6 +193,13 @@ document.getElementById("startMatch").onclick = () => {
 
   var intervalId = window.setInterval(function() {
     timeRemaining -= 1;
+    if (timeRemaining <= 0) {
+      document.getElementById("timeRemaining").innerHTML = "END";
+      window.clearInterval(intervalId);
+    }
+
+    //FIXME send the websocket time remaining messages?
+
     document.getElementById("timeRemaining").innerHTML = new Date(timeRemaining * 1000).toISOString().substr(11, 8).substr(3,);
   }, 1000);
 }
