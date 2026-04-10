@@ -299,6 +299,14 @@ class RobotClient:
             
             # update robot position/alignment from AprilTag process
             elif msg_id == 141 and msg.get("sender") == constants["APRILTAG_NAME"]:
+                with self.lock:
+                    self.tag_id = payload.get("ids")
+                    self.field_x = payload.get("x")
+                    self.field_y = payload.get("y")
+                    self.field_heading = payload.get("heading")
+                    self.camera_x_diff = payload.get("x_diff")
+                    self.camera_y_diff = payload.get("y_diff")
+                    self.camera_rot = payload.get("rot")
                 pass #TODO
 
         except Exception as e:
@@ -319,12 +327,42 @@ class RobotClient:
     def update_robot_command_from_controller(self):
         s = self.controller_state
         cmd = self.robot_cmd
-
+        
         # Drive (mecanum)
-        cmd.left_front_drive_motor,  \
-        cmd.right_front_drive_motor, \
-        cmd.left_back_drive_motor,   \
-        cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)
+        if s.right_stick_button:
+            rot_dir = 0
+            trans_amt = 0 
+            
+            #Rotate to face tag
+            while True:
+                cmd.left_front_drive_motor,  \
+                cmd.right_front_drive_motor, \
+                cmd.left_back_drive_motor,   \
+                cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, rot_dir)###
+                if self.camera_rot < -3:
+                    rot_dir = 1.0 #Change this to be more real rotation (idk what good numbers are)
+                elif self.camera_rot > 3:
+                    rot_dir = -1.0 #Change this to be more real rotation (idk what good numbers are)
+                else:
+                    break
+            
+            #Center to tag
+            while True:
+                cmd.left_front_drive_motor,  \
+                cmd.right_front_drive_motor, \
+                cmd.left_back_drive_motor,   \
+                cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, trans_amt, s.right_stick_x)###
+                if self.camera_x_diff > 0.5:
+                    trans_amt = 1.0 #Change this to be more real translation (idk what good numbers are)
+                elif self.camera_x_diff < -0.5:
+                    trans_amt = -1.0 #Change this to be more real rotation (idk what good numbers are)
+                else:
+                    break
+        else:
+            cmd.left_front_drive_motor,  \
+            cmd.right_front_drive_motor, \
+            cmd.left_back_drive_motor,   \
+            cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)###
 
         # Intake: right bumper in, left bumper out
         if s.right_bumper:
