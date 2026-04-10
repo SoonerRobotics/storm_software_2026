@@ -184,21 +184,24 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
     # so no COMMAND bytes, but keeping the start and end bytes
 
     #FIXME is it supposed to be little or big endian?
-    msg = struct.pack(">c12Bc",
-                      bytes(constants["START_BYTE"], 'ascii'),
-                      scale_motor_speed(cmd.left_front_drive_motor),
-                      scale_motor_speed(cmd.left_back_drive_motor),
-                      scale_motor_speed(cmd.right_front_drive_motor),
-                      scale_motor_speed(cmd.right_back_drive_motor),
-                      scale_motor_speed(cmd.arm_extend_motor),
-                      scale_motor_speed(cmd.intake_motor),
-                      scale_servo_pos(cmd.arm_servo_pos),
-                      scale_servo_pos(cmd.wrist_servo_pos),
-                      scale_servo_pos(cmd.claw_servo_pos),
-                      scale_motor_speed(cmd.climb_motor_speed),
-                      cmd.jumpstart_voltage,
-                      cmd.connected,
-                      bytes(constants["END_BYTE"], 'ascii'))
+    msg = struct.pack(
+        ">c12Bc",
+        bytes(constants["START_BYTE"], 'ascii'),
+        scale_motor_speed(cmd.left_front_drive_motor),
+        scale_motor_speed(cmd.left_back_drive_motor),
+        scale_motor_speed(cmd.right_front_drive_motor),
+        scale_motor_speed(cmd.right_back_drive_motor),
+        scale_motor_speed(cmd.arm_extend_motor),
+        scale_motor_speed(cmd.intake_motor),
+        scale_servo_pos(cmd.arm_servo_pos),
+        scale_servo_pos(cmd.wrist_servo_pos),
+        scale_servo_pos(cmd.claw_servo_pos),
+        scale_motor_speed(cmd.climb_motor_speed),
+        cmd.jumpstart_voltage,
+        cmd.connected,
+        bytes(constants["END_BYTE"], 'ascii')
+    )
+
     return msg
 
 # ---------- Robot control client ----------
@@ -278,6 +281,8 @@ class RobotClient:
             # update controller state for robot control
             elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
                 with self.lock:
+                    self.last_controller_state = self.controller_state
+
                     self.controller_state.left_stick_x = payload.get("left_stick_x")
                     self.controller_state.left_stick_y = payload.get("left_stick_y")
                     self.controller_state.right_stick_x = payload.get("right_stick_x")
@@ -408,6 +413,7 @@ class RobotClient:
         cmd.wrist_servo_pos = self.wrist_poses[self.wrist_index]
 
         # Claw: open/close toggle
+        # print(s.button_a)
         if s.button_a and not self.last_controller_state.button_a:
             self.claw_toggle = not self.claw_toggle
 
@@ -431,7 +437,7 @@ class RobotClient:
             cmd.climb_motor_speed = 0.0 #FIXME we might need to run it backwards too? maybe?
 
         # Jumpstart voltage FIXME this just runs 100% of the time lol
-        cmd.jumpstart_voltage = 2
+        cmd.jumpstart_voltage = 6
 
         # loss of signal checkb
         cmd.connected = self.connected_ws
@@ -459,6 +465,7 @@ class RobotClient:
                     self.update_robot_command_from_controller()
                     cmd = self.robot_cmd
 
+            #FIXME does this even need to be here?
             if self.serial and self.serial.is_open:
                 try:
                     data = pack_robot_command(cmd)
