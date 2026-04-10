@@ -337,14 +337,20 @@ class RobotClient:
         cmd = self.robot_cmd
         
         # Drive (mecanum)
-        #First check if alignment button is pressed
+        cmd.left_front_drive_motor,  \
+        cmd.right_front_drive_motor, \
+        cmd.left_back_drive_motor,   \
+        cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)###
+
+        #Auto alignment
         if s.right_stick_button:
             rot_dir = 0
             hor_amt = 0 
             dep_amt = 0
             
             #Rotate to face tag
-            while True:
+            while s.right_stick_button and abs(self.camera_rot) > 3:
+                
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
                 cmd.left_back_drive_motor,   \
@@ -355,10 +361,9 @@ class RobotClient:
                     rot_dir = -0.2 #Change this to be more real rotation (idk what good numbers are)
                 else:
                     rot_dir = 0
-                    break
             
             #Center to tag
-            while True:
+            while s.right_stick_button and abs(self.camera_x_diff) > 0.5:
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
                 cmd.left_back_drive_motor,   \
@@ -366,13 +371,12 @@ class RobotClient:
                 if self.camera_x_diff > 0.5:
                     hor_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
                 elif self.camera_x_diff < -0.5:
-                    hor_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
+                    hor_amt = -0.2 #Change this to be more real translation (idk what good numbers are)
                 else:
                     hor_amt = 0
-                    break
-                #17.5
+            
             #Depth Alignment
-            while True:
+            while s.right_stick_button and abs(self.camera_y_diff) > 17.5:
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
                 cmd.left_back_drive_motor,   \
@@ -383,12 +387,6 @@ class RobotClient:
                     dep_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
                 else:
                     dep_amt = 0
-                    break
-        else:
-            cmd.left_front_drive_motor,  \
-            cmd.right_front_drive_motor, \
-            cmd.left_back_drive_motor,   \
-            cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)###
 
         # Intake: right bumper in, left bumper out
         if s.right_bumper:

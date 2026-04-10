@@ -8,7 +8,9 @@
 **/dist
 **/videos
 
-AprilTagTesting/
+**/AprilTagTesting
+**/CMakeFiles
+**/CMakeCache.txt
 
 **/__pycache__
 
