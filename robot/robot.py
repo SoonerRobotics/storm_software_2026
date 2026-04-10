@@ -100,7 +100,6 @@ class ControllerState:
 
 class TimedRobotCommand:
     def __init__(self, command: RobotCommand, timeout: float):
-        def __init__(self, command: RobotCommand, timeout: float):
         self.command = command
         self.timeout = timeout
         
