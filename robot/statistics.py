@@ -63,7 +63,10 @@ class StatisticsClient:
                 "cpu_percent": psutil.cpu_percent(0.0, False),
                 "cpu_frequency": f"{psutil.cpu_freq(False).current/1000:.3f}",
                 "ram_percent": psutil.virtual_memory().percent,
-                "temperature": psutil.sensors_temperatures()["coretemp"][0][1] #FIXME I have no idea if this is the right one
+                "temperature": psutil.sensors_temperatures()['cpu_thermal'][0].current,
+
+                # for the driver station
+                # "temperature": psutil.sensors_temperatures()["coretemp"][0][1] #FIXME I have no idea if this is the right one
             }
 
             envelope = {

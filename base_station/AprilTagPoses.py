@@ -125,8 +125,8 @@ class AprilTagClient:
             poses_rot_y[idx] = -pose.rotation().y_degrees # negative because I want rotation to be clockwise positive
 
             tags_ID.append(result.getId())
-        cv2.imshow("frame", frame)
-        cv2.waitKey(1)
+        # cv2.imshow("frame", frame)
+        # cv2.waitKey(1)
 
         tag_to_use = 0
 

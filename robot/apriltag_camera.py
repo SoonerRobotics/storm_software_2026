@@ -54,15 +54,22 @@ class CameraClient:
             "frame_b64": b64
         }
 
-        envelope = {
+        envelope_apriltag = {
             "sender": self.constants["APRILTAG_CAMERA_NAME"],
-            "destination": self.constants["APRILTAG_NAME"], #FIXME ALSO STREAM ON DRIVERSTATION???
+            "destination": self.constants["APRILTAG_NAME"],
             "data": json.dumps(payload)
+        }
+
+        envelope_gui = {
+            "sender": self.constants["APRILTAG_CAMERA_NAME"],
+            "destination": self.constants["GUI_NAME"],
+            "data": json.dumps(payload)    
         }
 
         if self.ws is not None:
             try:
-                self.ws.send(json.dumps(envelope))
+                self.ws.send(json.dumps(envelope_apriltag))
+                self.ws.send(json.dumps(envelope_gui))
             except Exception as e:
                 print(f"[AT camera] send error: {e}")
 
