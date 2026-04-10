@@ -10,6 +10,7 @@ import serial
 import struct
 import os
 import tomllib
+import copy
 
 constants = {}
 
@@ -96,6 +97,44 @@ class ControllerState:
     trigger_left: float = 0.0
     trigger_right: float = 0.0
 
+
+class TimedRobotCommand:
+    def __init__(self, command: RobotCommand, timeout: float):
+        self.command = command
+        self.timeout = timeout
+        
+        self.time = -1
+    
+    def start(self):
+        self.time = time.time()
+
+    def is_done(self) -> bool:
+        if (time.time() - self.time) > self.timeout:
+            return True
+        return False
+
+class AutonomousSequence:
+    def __init__(self, commands: List[TimedRobotCommand]):
+        self.commands = commands
+        self.index = 0
+
+        self.started = False
+
+    def start(self):
+        self.index = 0
+        self.commands[self.index].start()
+
+        self.started = True
+    
+    def run(self):
+        if self.commands[self.index].is_done():
+            self.index += 1
+        
+        if self.index >= len(self.commands)+1:
+            return
+        
+        return self.commands[self.index] #FIXME???
+
 class RobotState(Enum):
     OFF = 0
     AUTONOMOUS = 1
@@ -107,6 +146,37 @@ class ArmState(Enum):
     PICKING_UP = 1
     SCORING_LOW = 2
     SCORING_HIGH = 3
+
+# ======== Autonomous Programs ========
+driveForwards = RobotCommand()
+driveForwards.left_front_drive_motor,  \
+driveForwards.right_front_drive_motor, \
+driveForwards.left_back_drive_motor,   \
+driveForwards.right_back_drive_motor = mecanum_blend(0.4, 0.0, 0.0)
+
+extendSlide = RobotCommand()
+extendSlide.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
+
+flipWrist = RobotCommand()
+flipWrist.wrist_servo_pos = constants["WRIST_LEFT"]
+
+# need to keep wrist at same position (idk if this is even worth it?)
+openClaw = copy.copy(flipWrist)
+openClaw.claw_servo_pos = constants["CLAW_OPEN"]
+
+DriveForwardAutonomous = AutonomousSequence([
+    TimedRobotCommand(driveForwards, 5.0), # 5 seconds
+    TimedRobotCommand(RobotCommand(), 2) # and stop?
+])
+
+ScoreOneAutonomous = AutonomousSequence([
+    TimedRobotCommand(driveForwards, 5.0), # position ourselves
+    TimedRobotCommand(RobotCommand(), 2),  # stop
+    TimedRobotCommand(extendSlide, 1),     #FIXME I don't think this is long enough?
+    TimedRobotCommand(flipWrist, 1),       # 1 second should be good? should also automatically not trigger claw?
+    TimedRobotCommand(openClaw, 1),        # do we want to drive further after this?
+])
+# =====================================
 
 # generate serial message to be sent to Pico
 def pack_robot_command(cmd: RobotCommand) -> bytes:
@@ -133,7 +203,7 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
 
 # ---------- Robot control client ----------
 class RobotClient:
-    def __init__(self, server_url, default_command: RobotCommand):
+    def __init__(self, server_url, default_command: RobotCommand, autos: List[AutonomousSequence]):
         self.ws = websocket.WebSocketApp(
             server_url,
             on_open=self.on_open,
@@ -157,7 +227,10 @@ class RobotClient:
 
         self.default_command = default_command
         self.robot_cmd = default_command
-        self.robot_state = RobotState.TELEOP #FIXME only run tele-op for now while testing stuff
+        self.robot_state = RobotState.TELEOP
+
+        self.autonomous_programs = autos
+        self.auto_idx = 0 #FIXME?
 
         #TODO FIXME have a callback to check FMS periodically? or like... idk man...
 
@@ -308,6 +381,14 @@ class RobotClient:
         cmd.connected = self.connected_ws
 
         self.robot_cmd = cmd
+    
+    def update_robot_command_from_autonomous(self):
+        if not self.autonomous_programs[self.auto_idx].started:
+            self.autonomous_programs[self.auto_idx].start()
+        
+        auto_cmd = self.autonomous_programs[self.auto_idx].run()
+        if auto_cmd is not None:
+            self.robot_cmd = auto_cmd
 
     def serial_loop(self):
         while not self.stop_event.is_set():
@@ -317,7 +398,7 @@ class RobotClient:
                 if self.robot_state == RobotState.OFF:
                     pass #FIXME send like, default command? or no command?
                 elif self.robot_state == RobotState.AUTONOMOUS:
-                    pass #FIXME need to figure out autonomous
+                    self.update_robot_command_from_autonomous()
                 elif self.robot_state == RobotState.TELEOP:
                     self.update_robot_command_from_controller()
                     cmd = self.robot_cmd

@@ -41,9 +41,18 @@ class LoggingClient:
     def on_open(self, ws):
         print("[Logging] Logging WS connected")
 
-        #FIXME we may have to do like, some funky send_all("destination: logger") or something...
+        # send websocket message so the relay server knows where to find us
+        ws.send(json.dumps({
+            "sender": constants["LOGGING_NAME"],
+            "destination": constants["GUI_NAME"], #FIXME???
+            "data": "{}"
+        }))
+
+        self.connected_ws = True
+
 
     def on_message(self, ws, raw):
+        print("ON MESSAGING!!!")
         #FIXME we might need a Lock()
         try:
             #FIXME get timestamp too? for logging???
