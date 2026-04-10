@@ -149,20 +149,20 @@ class ArmState(Enum):
 
 # ======== Autonomous Programs ========
 driveForwards = RobotCommand()
-driveForwards.left_front_drive_motor,  \
-driveForwards.right_front_drive_motor, \
-driveForwards.left_back_drive_motor,   \
-driveForwards.right_back_drive_motor = mecanum_blend(0.4, 0.0, 0.0)
+# driveForwards.left_front_drive_motor,  \
+# driveForwards.right_front_drive_motor, \
+# driveForwards.left_back_drive_motor,   \
+# driveForwards.right_back_drive_motor = mecanum_blend(0.4, 0.0, 0.0)
 
 extendSlide = RobotCommand()
-extendSlide.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
+# extendSlide.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
 
 flipWrist = RobotCommand()
-flipWrist.wrist_servo_pos = constants["WRIST_LEFT"]
+# flipWrist.wrist_servo_pos = constants["WRIST_LEFT"]
 
 # need to keep wrist at same position (idk if this is even worth it?)
 openClaw = copy.copy(flipWrist)
-openClaw.claw_servo_pos = constants["CLAW_OPEN"]
+# openClaw.claw_servo_pos = constants["CLAW_OPEN"]
 
 DriveForwardAutonomous = AutonomousSequence([
     TimedRobotCommand(driveForwards, 5.0), # 5 seconds
@@ -184,21 +184,24 @@ def pack_robot_command(cmd: RobotCommand) -> bytes:
     # so no COMMAND bytes, but keeping the start and end bytes
 
     #FIXME is it supposed to be little or big endian?
-    msg = struct.pack(">c12Bc",
-                      bytes(constants["START_BYTE"], 'ascii'),
-                      scale_motor_speed(cmd.left_front_drive_motor),
-                      scale_motor_speed(cmd.left_back_drive_motor),
-                      scale_motor_speed(cmd.right_front_drive_motor),
-                      scale_motor_speed(cmd.right_back_drive_motor),
-                      scale_motor_speed(cmd.arm_extend_motor),
-                      scale_motor_speed(cmd.intake_motor),
-                      scale_servo_pos(cmd.arm_servo_pos),
-                      scale_servo_pos(cmd.wrist_servo_pos),
-                      scale_servo_pos(cmd.claw_servo_pos),
-                      scale_motor_speed(cmd.climb_motor_speed),
-                      cmd.jumpstart_voltage,
-                      cmd.connected,
-                      bytes(constants["END_BYTE"], 'ascii'))
+    msg = struct.pack(
+        ">c12Bc",
+        bytes(constants["START_BYTE"], 'ascii'),
+        scale_motor_speed(cmd.left_front_drive_motor),
+        scale_motor_speed(cmd.left_back_drive_motor),
+        scale_motor_speed(cmd.right_front_drive_motor),
+        scale_motor_speed(cmd.right_back_drive_motor),
+        scale_motor_speed(cmd.arm_extend_motor),
+        scale_motor_speed(cmd.intake_motor),
+        scale_servo_pos(cmd.arm_servo_pos),
+        scale_servo_pos(cmd.wrist_servo_pos),
+        scale_servo_pos(cmd.claw_servo_pos),
+        scale_motor_speed(cmd.climb_motor_speed),
+        cmd.jumpstart_voltage,
+        cmd.connected,
+        bytes(constants["END_BYTE"], 'ascii')
+    )
+
     return msg
 
 # ---------- Robot control client ----------
@@ -219,9 +222,9 @@ class RobotClient:
         self.controller_state = ControllerState()
         self.last_controller_state  = ControllerState()
 
-        self.arm_poses = [constants["ARM_BASE_LOW"], constants["ARM_BASE_STOW"], constants["ARM_BASE_LOW"], constants["ARM_BASE_HIGH"], constants["ARM_BASE_CLIMB"]]
+        self.arm_poses = [constants["ARM_BASE_PICK"], constants["ARM_BASE_STOW"], constants["ARM_BASE_LOW"], constants["ARM_BASE_HIGH"], constants["ARM_BASE_CLIMB"]]
         self.wrist_poses = [constants["WRIST_LEFT"], constants["WRIST_STOW"], constants["WRIST_RIGHT"]]
-        self.arm_index = 0
+        self.arm_index = 1 # start in the middle
         self.wrist_index = 1 # start in the middle
         self.claw_toggle = False
 
@@ -278,6 +281,8 @@ class RobotClient:
             # update controller state for robot control
             elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
                 with self.lock:
+                    self.last_controller_state = copy.copy(self.controller_state)
+
                     self.controller_state.left_stick_x = payload.get("left_stick_x")
                     self.controller_state.left_stick_y = payload.get("left_stick_y")
                     self.controller_state.right_stick_x = payload.get("right_stick_x")
@@ -299,6 +304,14 @@ class RobotClient:
             
             # update robot position/alignment from AprilTag process
             elif msg_id == 141 and msg.get("sender") == constants["APRILTAG_NAME"]:
+                with self.lock:
+                    self.tag_id = payload.get("ids")
+                    self.field_x = payload.get("x")
+                    self.field_y = payload.get("y")
+                    self.field_heading = payload.get("heading")
+                    self.camera_x_diff = payload.get("x_diff")
+                    self.camera_y_diff = payload.get("y_diff")
+                    self.camera_rot = payload.get("rot")
                 pass #TODO
 
         except Exception as e:
@@ -319,12 +332,60 @@ class RobotClient:
     def update_robot_command_from_controller(self):
         s = self.controller_state
         cmd = self.robot_cmd
-
+        
         # Drive (mecanum)
-        cmd.left_front_drive_motor,  \
-        cmd.right_front_drive_motor, \
-        cmd.left_back_drive_motor,   \
-        cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)
+        #First check if alignment button is pressed
+        if s.right_stick_button:
+            rot_dir = 0
+            hor_amt = 0 
+            dep_amt = 0
+            
+            #Rotate to face tag
+            while True:
+                cmd.left_front_drive_motor,  \
+                cmd.right_front_drive_motor, \
+                cmd.left_back_drive_motor,   \
+                cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, rot_dir)###
+                if self.camera_rot < -3:
+                    rot_dir = 0.2 #Change this to be more real rotation (idk what good numbers are)
+                elif self.camera_rot > 3:
+                    rot_dir = -0.2 #Change this to be more real rotation (idk what good numbers are)
+                else:
+                    rot_dir = 0
+                    break
+            
+            #Center to tag
+            while True:
+                cmd.left_front_drive_motor,  \
+                cmd.right_front_drive_motor, \
+                cmd.left_back_drive_motor,   \
+                cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, hor_amt, s.right_stick_x)###
+                if self.camera_x_diff > 0.5:
+                    hor_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
+                elif self.camera_x_diff < -0.5:
+                    hor_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
+                else:
+                    hor_amt = 0
+                    break
+                #17.5
+            #Depth Alignment
+            while True:
+                cmd.left_front_drive_motor,  \
+                cmd.right_front_drive_motor, \
+                cmd.left_back_drive_motor,   \
+                cmd.right_back_drive_motor = mecanum_blend(dep_amt, s.left_stick_x, s.right_stick_x)
+                if self.camera_y_diff < 17.5:
+                    dep_amt = -0.2 #Change this to be more real translation (idk what good numbers are)
+                elif self.camera_y_diff > 17.5:
+                    dep_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
+                else:
+                    dep_amt = 0
+                    break
+        else:
+            cmd.left_front_drive_motor,  \
+            cmd.right_front_drive_motor, \
+            cmd.left_back_drive_motor,   \
+            cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)###
 
         # Intake: right bumper in, left bumper out
         if s.right_bumper:
@@ -334,24 +395,25 @@ class RobotClient:
         else:
             cmd.intake_motor = 0.0
 
-        # Arm: score high/low, grab battery, stow        
-        if s.dpad_top and not self.last_controller_state.dpad_top and self.arm_index < (len(self.arm_poses - 1)):
+        # Arm: score high/low, grab battery, stow
+        if s.dpad_top and not self.last_controller_state.dpad_top and self.arm_index < (len(self.arm_poses) - 1):
             self.arm_index += 1
         elif s.dpad_bottom and not self.last_controller_state.dpad_bottom and self.arm_index > 0:
-            self.arm_index += 1
+            self.arm_index -= 1
         
         cmd.arm_servo_pos = self.arm_poses[self.arm_index]
 
 
         # Wrist: score left/right, grab battery
-        if s.dpad_right and not self.last_controller_state.dpad_right and self.wrist_index < (len(self.wrist_poses - 1)):
+        if s.dpad_right and not self.last_controller_state.dpad_right and self.wrist_index < (len(self.wrist_poses) - 1):
             self.wrist_index += 1
         elif s.dpad_left and not self.last_controller_state.dpad_left and self.wrist_index > 0:
-            self.wrist_index += 1
+            self.wrist_index -= 1
         
         cmd.wrist_servo_pos = self.wrist_poses[self.wrist_index]
 
         # Claw: open/close toggle
+        # print(s.button_a)
         if s.button_a and not self.last_controller_state.button_a:
             self.claw_toggle = not self.claw_toggle
 
@@ -375,7 +437,7 @@ class RobotClient:
             cmd.climb_motor_speed = 0.0 #FIXME we might need to run it backwards too? maybe?
 
         # Jumpstart voltage FIXME this just runs 100% of the time lol
-        #TODO FIXME
+        cmd.jumpstart_voltage = 6
 
         # loss of signal checkb
         cmd.connected = self.connected_ws
@@ -403,6 +465,7 @@ class RobotClient:
                     self.update_robot_command_from_controller()
                     cmd = self.robot_cmd
 
+            #FIXME does this even need to be here?
             if self.serial and self.serial.is_open:
                 try:
                     data = pack_robot_command(cmd)
@@ -452,7 +515,7 @@ if __name__ == "__main__":
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
-    robot = RobotClient(f"{url}:{port}", default_robot_command)
+    robot = RobotClient(f"{url}:{port}", default_robot_command, [DriveForwardAutonomous, ScoreOneAutonomous])
 
     try:
         robot.run()

@@ -166,6 +166,7 @@ class ControllerClient:
         self.lock = threading.Lock()
         self.stop_event = threading.Event()
         self.controller_state = self.default_state()
+
         self.joystick = None 
 
     # >> WebSocket callbacks (Moved above __init__ to fix AttributeError) <<
@@ -295,6 +296,8 @@ class ControllerClient:
             if self.connected:
                 with self.lock:
                     msg10 = self.controller_state.copy()
+
+                    # print(self.controller_state["button_a"])
                     
                     msg = {
                         "sender": constants["CONTROLLER_INPUT_NAME"],

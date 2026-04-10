@@ -30,11 +30,11 @@ END_BYTE = "!" # binary string
 
 # preset positions/speeds
 # STOW = starting configuration, also driving around position
-ARM_BASE_PICK = 0.8 #FIXME
-ARM_BASE_STOW = 0.8 #FIXME
+ARM_BASE_PICK = 0.8
 ARM_BASE_LOW = 0.7
-ARM_BASE_HIGH = 0.8
-ARM_BASE_CLIMB = 0.9 #FIXME
+ARM_BASE_STOW = 0.7
+ARM_BASE_HIGH = 0.65
+ARM_BASE_CLIMB = 0.4
 
 WRIST_STOW = 0.5
 WRIST_PICK = 0.5
@@ -50,13 +50,11 @@ SLIDE_RETRACT_SPEED = -0.2
 SLIDE_STOW_SPEED = 0.0 # stow speed is 0 because motor keeps it where it is anyways
 
 # intake speed (intake off speed is 0.0, naturally)
-INTAKE_IN_SPEED = 0.6
-INTAKE_OUT_SPEED = -0.5
+INTAKE_IN_SPEED = -0.5
+INTAKE_OUT_SPEED = 0.5
 
 # climber speeds
-CLIMB_STOW = 0.0
-CLIMB_HOOK = 0.5
-CLIMB_UP = 1.0
+CLIMB_SPEED = 1.0
 
 # absolute maximum, scale of 0-1
 MAX_DRIVE_SPEED = 0.5
