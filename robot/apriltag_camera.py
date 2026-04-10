@@ -94,7 +94,7 @@ def camera_loop(cam_client: CameraClient):
         # Optional: downscale / compress more
         # frame = cv2.resize(frame, (CAM_WIDTH, CAM_HEIGHT))
 
-        frame = cv2.rotate(frame, cv2.ROTATE_180)
+        #frame = cv2.rotate(frame, cv2.ROTATE_180)
 
         ok, jpg = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
         if ok:
