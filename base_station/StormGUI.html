@@ -22,7 +22,11 @@
 <body>
 
 <div id="left">
-  <h1>Pink Blush Vision</h1>
+  <div style="justify-items: center;justify-self: center;justify-content: center;">
+    <h1 style="display: inline-block">Pink Blush Vision</h1>
+    <button id="startMatch" style="display: inline-block; padding-left: 8px">Start Match</button>
+    <div style="display: inline-block; font-size: 18pt; padding-left: 8px">Time Remaining: <span id="timeRemaining">00:00</span></div>
+  </div>
   <canvas id="video-canvas" width="1080" height="640"></canvas>
   <div style="margin-top:10px;">
     Mode:
@@ -158,6 +162,7 @@ let lastSent = '';
 let frameBusy = false;
 let pendingFrameB64 = null;
 let lastFrameTimestamp = 0;
+let timeRemaining = -1; // temporary value
 
 document.getElementById('modeIndicator').textContent = mode;
 document.getElementById('toggleMode').onclick = ()=> {
@@ -170,6 +175,27 @@ document.getElementById('clearGoal').onclick = ()=> {
   currentGoalTag = null;
   document.getElementById('selected-goal').textContent = 'none';
 };
+
+document.getElementById("startMatch").onclick = () => {
+  timeRemaining = 4*60;
+
+  // send the 'start match' message
+  if(relaySocket && relaySocket.readyState === WebSocket.OPEN) {
+    relaySocket.send(JSON.stringify({
+      sender: GUI_NAME,
+      destination: ROBOT_NAME,
+      data: JSON.stringify({
+        id: 20, // match state message
+        time_remaining: timeRemaining
+      })
+    }));
+  }
+
+  var intervalId = window.setInterval(function() {
+    timeRemaining -= 1;
+    document.getElementById("timeRemaining").innerHTML = new Date(timeRemaining * 1000).toISOString().substr(11, 8).substr(3,);
+  }, 1000);
+}
 
 /* Gamepad override in MANUAL mode */
 let gpIndex = null;
