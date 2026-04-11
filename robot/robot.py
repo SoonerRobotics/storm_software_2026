@@ -315,7 +315,7 @@ class RobotClient:
         self.claw_toggle = False
 
         self.voltage_setpoint = 2 # good ol' default 2
-        self.charge_rpm_setpoint = 0 # and don't spin the motor unless we have to?
+        self.charge_rpm_setpoint = -1 # and don't spin the motor unless we have to?
 
         self.default_command = default_command
         self.robot_cmd = default_command
@@ -366,13 +366,13 @@ class RobotClient:
             #TODO FIXME separate one for autonomous???
 
             # update robot state
-            if msg_id == 30 and msg.get("sender") == constants["GUI_NAME"]:
-                with self.lock:
-                    self.robot_state = payload.get("state")
+            #if msg_id == 30 and msg.get("sender") == constants["GUI_NAME"]:
+            #    with self.lock:
+            #        self.robot_state = payload.get("state")
                     #FIXME autonomous program selector
 
             # update controller state for robot control
-            elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
+            if msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
                 with self.lock:
                     self.last_controller_state = copy.copy(self.controller_state)
 
@@ -410,11 +410,13 @@ class RobotClient:
             elif msg_id == 30:
                 with self.lock:
                     self.voltage_setpoint = payload.get("voltage")
+                    print(f"voltage: {self.voltage_setpoint}")
             
             # charge wheel RPM from GUI
             elif msg_id == 31:
                 with self.lock:
-                    self.charge_rpm_setpoint = payload.get("rpm")
+                    self.charge_rpm_setpoint = payload.get("duty")
+                    print(f"chrage command: {self.charge_rpm_setpoint}")
 
         except Exception as e:
             print(f"[Robot] WS message error: {e}")
@@ -538,7 +540,7 @@ class RobotClient:
 
         # Charging wheel speed FIXME this just runs 100% of the time lol and also can't be controlled
         # cmd.charge_motor_speed = self.charge_rpm_setpoint #FIXME this needs more processesing because we're getting a hard RPM and it needs to be a %output
-        cmd.charge_motor_speed = 0.0
+        cmd.charge_motor_speed = self.charge_rpm_setpoint
 
         # loss of signal checkb
         cmd.connected = self.connected_ws
@@ -620,6 +622,7 @@ if __name__ == "__main__":
     default_robot_command.arm_servo_pos = constants["ARM_BASE_LOW"]
     default_robot_command.wrist_servo_pos = constants["WRIST_STOW"]
     default_robot_command.claw_servo_pos = constants["CLAW_CLOSED"]
+    default_robot_command.charge_motor_speed = -1
 
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]

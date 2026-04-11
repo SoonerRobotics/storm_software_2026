@@ -1,7 +1,7 @@
-COMPETITION = false
+COMPETITION = true
 
 # --- Networking constants ---
-COMPETITION_SERVER_URL = "ws://192.168.1.74" # where the relay_server executable is running (normally robot? base station? TODO)
+COMPETITION_SERVER_URL = "ws://10.10.8.79" # where the relay_server executable is running (normally robot? base station? TODO)
 COMPETITION_SERVER_PORT = 1909 # this cannot change so easily, as it is hard-coded in ws_server/relay_server.cpp
 
 # for debugging/testing
