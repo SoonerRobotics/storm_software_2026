@@ -100,23 +100,56 @@ class ControllerState:
     trigger_right: float = 0.0
 
 
-class TimedRobotCommand:
+class AutonomousRobotCommand:
+    def __init__(self, command: RobotCommand):
+        self.command = command
+    
+    def start(self):
+        return
+    
+    def run(self):
+        return self.command
+    
+    def is_done(self):
+        return True
+
+class TimedRobotCommand(AutonomousRobotCommand):
     def __init__(self, command: RobotCommand, timeout: float):
         self.command = command
         self.timeout = timeout
         
         self.time = -1
     
-    def start(self):
+    def start(self, *args):
         self.time = time.time()
+    
+    def run(self) -> RobotCommand:
+        return self.command
 
     def is_done(self) -> bool:
         if (time.time() - self.time) > self.timeout:
             return True
         return False
 
+class AprilTagRobotCommand(AutonomousRobotCommand):
+    def __init__(self, command: RobotCommand):
+        self.command = command
+        self.done = False
+    
+    def start(self):
+        return #FIXME? is this gonna work?
+    
+    def run(self, rotation, x, y) -> RobotCommand:
+        return self.command #FIXME @Brendan write your stuff here or something.
+        # you could have a field that we pass in in __init__ that's like "type of command" or something,
+        # and then an if/elif chain (or actually Python added switch statements in the form of "match case" which is interesting)
+        # in this function that returns a different RobotCommand
+    
+    def is_done(self) -> bool:
+        return self.done
+
 class AutonomousSequence:
-    def __init__(self, commands: List[TimedRobotCommand]):
+    def __init__(self, commands: List[AutonomousRobotCommand]):
         self.commands = commands
         self.index = 0
 
@@ -128,32 +161,23 @@ class AutonomousSequence:
 
         self.started = True
     
-    def run(self) -> TimedRobotCommand:
+    def run(self, *args) -> AutonomousRobotCommand:
         try:
             if self.commands[self.index].is_done():
                 self.index += 1
-            
-            # if self.index >= (len(self.commands)+1):
-            #     return None
-        
-            if self.commands[self.index].time == -1:
                 self.commands[self.index].start()
+            
         except Exception as e:
             return None
             
-        return self.commands[self.index]
+        return self.commands[self.index].run(*args)
+
 
 class RobotState(Enum):
     OFF = 0
     AUTONOMOUS = 1
     TELEOP = 2
     TEST = 3
-
-class ArmState(Enum):
-    STOWED = 0 # starting configuration
-    PICKING_UP = 1
-    SCORING_LOW = 2
-    SCORING_HIGH = 3
 
 # ======== Autonomous Programs ========
 def get_autonomous_programs(constants):
@@ -492,7 +516,7 @@ class RobotClient:
         if not self.autonomous_programs[self.auto_idx].started:
             self.autonomous_programs[self.auto_idx].start()
 
-        auto_cmd = self.autonomous_programs[self.auto_idx].run()
+        auto_cmd = self.autonomous_programs[self.auto_idx].run(self.camera_rot, self.camera_x_diff, self.camera_y_diff)
         if auto_cmd is not None:
             self.robot_cmd = auto_cmd.command
         else:
