@@ -13,5 +13,5 @@ sleep 1
 
 # run python scripts
 python3 ./controller_client.py &
-python3 ./AprilTagPoses.py &
-python3 ./storm_logging.py
+python3 ./AprilTagPoses.py
+#python3 ./storm_logging.py

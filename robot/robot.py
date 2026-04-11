@@ -258,12 +258,15 @@ class RobotClient:
         self.wrist_index = 1 # start in the middle
         self.claw_toggle = False
 
+        self.voltage_setpoint = 2 # good ol' default 2
+        self.charge_rpm_setpoint = 0 # and don't spin the motor unless we have to?
+
         self.default_command = default_command
         self.robot_cmd = default_command
         self.robot_state = RobotState.AUTONOMOUS
 
         self.autonomous_programs = autos
-        self.auto_idx = 1 #FIXME?
+        self.auto_idx = 0 #FIXME?
 
         #TODO FIXME have a callback to check FMS periodically? or like... idk man...
 
@@ -342,7 +345,16 @@ class RobotClient:
                     self.camera_x_diff = payload.get("x_diff")
                     self.camera_y_diff = payload.get("y_diff")
                     self.camera_rot = payload.get("rot")
-                pass 
+            
+            # jumpstart voltage from GUI
+            elif msg_id == 30:
+                with self.lock:
+                    self.voltage_setpoint = payload.get("voltage")
+            
+            # charge wheel RPM from GUI
+            elif msg_id == 31:
+                with self.lock:
+                    self.charge_rpm_setpoint = payload.get("rpm")
 
         except Exception as e:
             print(f"[Robot] WS message error: {e}")
@@ -367,7 +379,7 @@ class RobotClient:
         cmd.left_front_drive_motor,  \
         cmd.right_front_drive_motor, \
         cmd.left_back_drive_motor,   \
-        cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)###
+        cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)
 
         #Auto alignment: right stick button hold
         if s.right_stick_button:
@@ -465,10 +477,11 @@ class RobotClient:
             cmd.climb_motor_speed = 0.0 #FIXME we might need to run it backwards too? maybe?
 
         # Jumpstart voltage FIXME this just runs 100% of the time lol
-        cmd.jumpstart_voltage = 6
+        cmd.jumpstart_voltage = self.voltage_setpoint
 
         # Charging wheel speed FIXME this just runs 100% of the time lol and also can't be controlled
-        cmd.charge_motor_speed = 0.5
+        # cmd.charge_motor_speed = self.charge_rpm_setpoint #FIXME this needs more processesing because we're getting a hard RPM and it needs to be a %output
+        cmd.charge_motor_speed = 0.0
 
         # loss of signal checkb
         cmd.connected = self.connected_ws
