@@ -286,7 +286,7 @@ class ControllerClient:
                     # for key, value in s.items():
                     #     print(f"{key}: {value}")
 
-            time.sleep(0.01) # 100 Hz update rate for polling
+            time.sleep(0.02) # 50 Hz update rate for polling
 
     # ----------------------------
     # Send loop

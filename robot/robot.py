@@ -377,8 +377,6 @@ class RobotClient:
             # update controller state for robot control
             elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
                 with self.lock:
-                    self.last_controller_state = copy.copy(self.controller_state)
-
                     self.controller_state.left_stick_x = payload.get("left_stick_x")
                     self.controller_state.left_stick_y = payload.get("left_stick_y")
                     self.controller_state.right_stick_x = payload.get("right_stick_x")
@@ -553,6 +551,7 @@ class RobotClient:
         cmd.connected = self.connected_ws
 
         self.robot_cmd = cmd
+        self.last_controller_state = copy.copy(s)
     
     def update_robot_command_from_autonomous(self):
         if not self.autonomous_programs[self.auto_idx].started:
