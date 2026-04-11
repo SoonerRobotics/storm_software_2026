@@ -105,7 +105,7 @@ def main():
 
     statistics = StatisticsClient(f"{url}:{port}", constants)
     statistics.connect()
-    statistics_thread = threading.Thread(target=statistics.run_forever, kwargs={"ping_interval": 10, "ping_timeout": 5}, daemon=True)
+    statistics_thread = threading.Thread(target=statistics.run_forever, daemon=True)
     statistics_thread.start()
     print(print(f"Starting statistics thread with ID: {statistics_thread.native_id}"))
     
