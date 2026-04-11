@@ -561,6 +561,7 @@ class RobotClient:
         auto_cmd = self.autonomous_programs[self.auto_idx].run()
         if auto_cmd is not None:
             self.robot_cmd = auto_cmd.command
+            return auto_cmd.command
         else:
             return None
 
@@ -573,7 +574,10 @@ class RobotClient:
                     pass #FIXME send like, default command? or no command?
                 
                 elif self.robot_state == RobotState.AUTONOMOUS:
+                    print(self.robot_cmd)
+
                     if self.update_robot_command_from_autonomous() is None:
+                        print("SWITCHING TO T")
                         self.robot_state = RobotState.TELEOP
                     else:
                         if self.robot_cmd is not None:
