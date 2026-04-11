@@ -370,9 +370,12 @@ class RobotClient:
             #    with self.lock:
             #        self.robot_state = payload.get("state")
                     #FIXME autonomous program selector
+            if msg_id == 6767:
+                with self.lock:
+                    self.robot_state = RobotState.AUTONOMOUS
 
             # update controller state for robot control
-            if msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
+            elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
                 with self.lock:
                     self.last_controller_state = copy.copy(self.controller_state)
 
