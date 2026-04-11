@@ -32,7 +32,7 @@ END_BYTE = "!" # binary string
 # STOW = starting configuration, also driving around position
 ARM_BASE_PICK = 0.8
 ARM_BASE_STOW = 0.75
-ARM_BASE_LOW = 0.7
+ARM_BASE_LOW = 0.72
 ARM_BASE_HIGH = 0.65
 ARM_BASE_CLIMB = 0.35
 
