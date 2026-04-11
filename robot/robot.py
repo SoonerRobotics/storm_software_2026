@@ -602,7 +602,7 @@ class RobotClient:
         print(print(f"Starting robot code with ID: {t.native_id}"))
         signal.signal(signal.SIGINT, self.shutdown)
         
-        self.ws.run_forever(ping_interval=1, ping_timeout=0.5)
+        self.ws.run_forever(ping_interval=10, ping_timeout=5)
 
 
 # ---------- Main ----------

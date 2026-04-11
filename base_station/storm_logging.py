@@ -33,7 +33,7 @@ class LoggingClient:
 
         self.stop_event = threading.Event()
 
-        self.t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 1, "ping_timeout": 0.5}, daemon=True)
+        self.t = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 10, "ping_timeout": 5}, daemon=True)
         self.t.start()
         print(f"[Logging] Starting thread with ID {self.t.native_id}")
 
