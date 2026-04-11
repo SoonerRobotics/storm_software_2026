@@ -531,9 +531,10 @@ class RobotClient:
             cmd.arm_extend_motor = constants["SLIDE_STOW_SPEED"]
 
         # Climber retract/extend
-        if s.button_y: # only while held for safety
+        if s.button_y or self.last_controller_state.button_y: # only while held for safety
             cmd.climb_motor_speed = constants["CLIMB_SPEED"]
-        else:
+        elif not s.button_y and not self.last_controller_state.button_y:
+            # only stop after 2 consecutive not-presses?
             cmd.climb_motor_speed = 0.0 #FIXME we might need to run it backwards too? maybe?
 
         # Jumpstart voltage FIXME this just runs 100% of the time lol

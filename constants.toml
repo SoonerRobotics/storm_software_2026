@@ -54,7 +54,7 @@ INTAKE_IN_SPEED = -0.5
 INTAKE_OUT_SPEED = 0.5
 
 # climber speeds
-CLIMB_SPEED = 1.0
+CLIMB_SPEED = -0.9
 
 # absolute maximum, scale of 0-1
 MAX_DRIVE_SPEED = 0.5
