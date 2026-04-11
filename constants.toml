@@ -64,9 +64,9 @@ MAX_TURN_SPEED = 0.5
 # == cameras ==
 # driver camera
 DRIVER_CAM_DEVICE_INDEX = 0 # /dev/video0
-CAM_WIDTH = 640
-CAM_HEIGHT = 360
-CAM_FPS = 10.0 # desired send rate
+CAM_WIDTH = 360
+CAM_HEIGHT = 140
+CAM_FPS = 20.0 # desired send rate
 
 # apriltag camera
 APRILTAG_CAM_DEVICE_INDEX = 2 # /dev/video1 FIXME
