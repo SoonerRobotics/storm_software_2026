@@ -155,8 +155,8 @@ class ArmState(Enum):
     SCORING_LOW = 2
     SCORING_HIGH = 3
 
-# ======== Auto Alignment (#FIXME should probably be moved elsewhere but idk where) ========
-def autoRot(cmd):
+# ======== AutoAlignment Stuff #FIXME movve later ========
+def doRotation(cmd):
     if not abs(cmd.camera_rot) > 3:
         cmd.left_front_drive_motor,  \
         cmd.right_front_drive_motor, \
@@ -169,7 +169,7 @@ def autoRot(cmd):
         else:
             rot_dir = 0
 
-def autoCenter(cmd):
+def doCenter(cmd):
     if not abs(cmd.camera_x_diff) > 0.5:
         cmd.left_front_drive_motor,  \
         cmd.right_front_drive_motor, \
@@ -182,7 +182,7 @@ def autoCenter(cmd):
         else:
             hor_amt = 0
 
-def autoDepth(cmd):
+def doDepth(cmd):
     if not abs(cmd.camera_y_diff) > 17.5:
         cmd.left_front_drive_motor,  \
         cmd.right_front_drive_motor, \
@@ -194,7 +194,6 @@ def autoDepth(cmd):
             dep_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
         else:
             dep_amt = 0
-# =====================================
 
 # ======== Autonomous Programs ========
 def get_autonomous_programs(constants):
@@ -233,15 +232,18 @@ def get_autonomous_programs(constants):
     endCommand.wrist_servo_pos = constants["WRIST_STOW"]
     endCommand.claw_servo_pos = constants["CLAW_OPEN"]
 
-    autoAlign = RobotCommand()
+    autoRotate = RobotCommand()
+    doRotation(autoRotate)
+    autoCenter = RobotCommand()
+    doCenter(autoCenter)
+    autoDepth = RobotClient()
+    doDepth(autoDepth)
 
-    autoAlignAutonomous = AutonomousSequence([
-        TimedRobotCommand(autoRot(autoAlign), 0.1),
-        TimedRobotCommand(autoCenter(autoAlign), 0.1),
-        TimedRobotCommand(autoDepth(autoAlign), 0.1)
+    AutoAlignAutonomous = AutonomousSequence([
+        TimedRobotCommand(autoRotate, 1),
+        TimedRobotCommand(autoCenter, 1),
+        TimedRobotCommand(autoDepth, 1)
     ])
-
-
     #TODO should we bring the back in too?
 
     ScoreOneAutonomous = AutonomousSequence([
