@@ -132,14 +132,35 @@ class TimedRobotCommand(AutonomousRobotCommand):
         return False
 
 class AprilTagRobotCommand(AutonomousRobotCommand):
-    def __init__(self, command: RobotCommand):
+    def __init__(self, command: RobotCommand,):
         self.command = command
         self.done = False
+        self.cmd_type = ""
     
     def start(self):
         return #FIXME? is this gonna work?
     
+    def checkType(self, rotation, x_diff, y_diff):
+        if 3 > abs(rotation):
+            if rotation < -3:
+                self.cmd_type = "rotate_right"
+            elif rotation > 3:
+                self.cmd_type = "rotate_left"
+
+        elif 0.5 > abs(x_diff):
+            if x_diff > 0.5:
+                self.cmd_type = "align_right"
+            elif x_diff < -0.5:
+                self.cmd_type = "align_left"
+            
+        elif 0.5 > abs(y_diff):
+            if y_diff > 0.5:
+                self.cmd_type = "align_forward"
+            elif y_diff < -0.5:
+                self.cmd_type = "align_backward"
+    
     def run(self, rotation, x, y) -> RobotCommand:
+        self.checkType(rotation, x, y)
         return self.command #FIXME @Brendan write your stuff here or something.
         # you could have a field that we pass in in __init__ that's like "type of command" or something,
         # and then an if/elif chain (or actually Python added switch statements in the form of "match case" which is interesting)
@@ -215,6 +236,61 @@ def get_autonomous_programs(constants):
 
     endCommand.wrist_servo_pos = constants["WRIST_STOW"]
     endCommand.claw_servo_pos = constants["CLAW_OPEN"]
+
+    
+
+    rotate_left = RobotCommand()
+    rotate_left.left_front_drive_motor, \
+    rotate_left.right_front_drive_motor, \
+    rotate_left.left_back_drive_motor, \
+    rotate_left.right_back_drive_motor = mecanum_blend(0.0, 0.0, -0.2)
+
+    rotate_right = RobotCommand()
+    rotate_right.left_front_drive_motor, \
+    rotate_right.right_front_drive_motor, \
+    rotate_right.left_back_drive_motor, \
+    rotate_right.right_back_drive_motor = mecanum_blend(0.0, 0.0, 0.2)
+
+    align_left = RobotCommand()
+    align_left.left_front_drive_motor, \
+    align_left.right_front_drive_motor, \
+    align_left.left_back_drive_motor, \
+    align_left.right_back_drive_motor = mecanum_blend(0.0, -0.2, 0.0)
+
+    align_right = RobotCommand()
+    align_right.left_front_drive_motor, \
+    align_right.right_front_drive_motor, \
+    align_right.left_back_drive_motor, \
+    align_right.right_back_drive_motor = mecanum_blend(0.0, 0.2, 0.0)
+
+    align_forward = RobotCommand()
+    align_forward.left_front_drive_motor, \
+    align_forward.right_front_drive_motor, \
+    align_forward.left_back_drive_motor, \
+    align_forward.right_back_drive_motor = mecanum_blend(0.2, 0.0, 0.0)
+
+    align_backward = RobotCommand()
+    align_backward.left_front_drive_motor, \
+    align_backward.right_front_drive_motor, \
+    align_backward.left_back_drive_motor, \
+    align_backward.right_back_drive_motor = mecanum_blend(-0.2, 0.0, 0.0)
+
+    autoAlign = AprilTagRobotCommand(RobotCommand())
+
+    match autoAlign.cmd_type:
+        case "rotate_right":
+            autoAlign.command = rotate_right
+        case "rotate_left":
+            autoAlign.command = rotate_left
+        case "align_right":
+            autoAlign.command = align_right
+        case "align_left":
+            autoAlign.command = align_left
+        case "align_forward":
+            autoAlign.command = align_forward
+        case "align_backward":
+            autoAlign.command = align_backward
+
 
     #TODO should we bring the back in too?
 
