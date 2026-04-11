@@ -9,4 +9,4 @@ echo "Running processes..."
 python3 ./robot.py &
 python3 ./statistics.py &
 python3 ./driver_camera.py &
-python3 ./AprilTagPoses.py &
+python3 ./apriltag_camera.py
