@@ -41,7 +41,8 @@ class AprilTagClient:
         #camera calibration stuff, has been recalibrated very frequently so don't worry if numbers differ between files
         #camera_params = [1.389128301095909592e+03, 1.411771668458814474e+03, 1.023578058929374038e+03, 5.617593978785050695e+02] #Web cam
         #camera_params = [1709.8645603523432, 1689.1037121536826, 730.0106844229263, 493.8146502035437] #Brendan Camera
-        camera_params = [1211.2034279937993, 1204.865899413857, 945.3223945388609, 557.9796530877504] #Global shutter
+        #camera_params = [1211.2034279937993, 1204.865899413857, 945.3223945388609, 557.9796530877504] #Global shutter
+        camera_params = [466.6214448380045, 466.49983805555013, 306.1498624163491, 222.52455225066967]
         tag_size = 0.0635   #small
         #tag_size = 0.1   #medium
 
