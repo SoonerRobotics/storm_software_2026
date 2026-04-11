@@ -562,7 +562,7 @@ class RobotClient:
         if auto_cmd is not None:
             self.robot_cmd = auto_cmd.command
         else:
-            return None #FIXME???
+            return None
 
     def serial_loop(self):
         while not self.stop_event.is_set():
@@ -571,14 +571,15 @@ class RobotClient:
             with self.lock:
                 if self.robot_state == RobotState.OFF:
                     pass #FIXME send like, default command? or no command?
+                
                 elif self.robot_state == RobotState.AUTONOMOUS:
-                    self.update_robot_command_from_autonomous()
-
-                    if self.robot_cmd is not None:
-                        cmd = self.robot_cmd
-                        cmd.connected = self.connected_ws
-                    else:
+                    if self.update_robot_command_from_autonomous() is None:
                         self.robot_state = RobotState.TELEOP
+                    else:
+                        if self.robot_cmd is not None:
+                            cmd = self.robot_cmd
+                            cmd.connected = self.connected_ws
+                
                 elif self.robot_state == RobotState.TELEOP:
                     self.update_robot_command_from_controller()
                     cmd = self.robot_cmd
