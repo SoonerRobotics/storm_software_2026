@@ -194,7 +194,7 @@ void loop() {
     timed_out = false;
   }
 
-  if((data[0] == '$') && (data[13] == '!') && !timed_out) {
+  if((data[0] == '$') && (data[14] == '!') && !timed_out) {
     connected = data[13]; // for loss of signal
     
     if (connected) {
