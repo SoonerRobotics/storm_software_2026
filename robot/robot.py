@@ -30,9 +30,13 @@ def square_inputs(val: float) -> float:
     return sign * (val ** 2)
 
 def mecanum_blend(x: float, y: float, w: float) -> List[float]:
-    vx = clamp(apply_deadzone(square_inputs(x), constants["DEADZONE"]), -constants["MAX_DRIVE_SPEED"], constants["MAX_DRIVE_SPEED"])      # forward/back
-    vy = clamp(apply_deadzone(square_inputs(y), constants["DEADZONE"]), -constants["MAX_DRIVE_SPEED"], constants["MAX_DRIVE_SPEED"])      # strafe right-left
-    omega = clamp(apply_deadzone(square_inputs(w), constants["DEADZONE"]), -constants["MAX_TURN_SPEED"], constants["MAX_TURN_SPEED"])     # turn
+    vx = clamp(apply_deadzone(square_inputs(x), constants["DEADZONE"]), -1, 1)      # forward/back
+    vy = clamp(apply_deadzone(square_inputs(y), constants["DEADZONE"]), -1, 1)      # strafe right-left
+    omega = clamp(apply_deadzone(square_inputs(w), constants["DEADZONE"]), -1, 1)     # turn
+
+    vx /= 2
+    vy /= 2
+    omega /= 2
 
     fl = vx + vy + omega
     fr = vx - vy - omega
