@@ -155,6 +155,46 @@ class ArmState(Enum):
     SCORING_LOW = 2
     SCORING_HIGH = 3
 
+# ======== AutoAlignment Stuff #FIXME movve later ========
+def doRotation(cmd):
+    if not abs(cmd.camera_rot) > 3:
+        cmd.left_front_drive_motor,  \
+        cmd.right_front_drive_motor, \
+        cmd.left_back_drive_motor,   \
+        cmd.right_back_drive_motor = mecanum_blend(0, 0, rot_dir)###
+        if cmd.camera_rot < -3:
+            rot_dir = 0.2 #Change this to be more real rotation (idk what good numbers are)
+        elif cmd.camera_rot > 3:
+            rot_dir = -0.2 #Change this to be more real rotation (idk what good numbers are)
+        else:
+            rot_dir = 0
+
+def doCenter(cmd):
+    if not abs(cmd.camera_x_diff) > 0.5:
+        cmd.left_front_drive_motor,  \
+        cmd.right_front_drive_motor, \
+        cmd.left_back_drive_motor,   \
+        cmd.right_back_drive_motor = mecanum_blend(0, hor_amt, 0)###
+        if cmd.camera_x_diff > 0.5:
+            hor_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
+        elif cmd.camera_x_diff < -0.5:
+            hor_amt = -0.2 #Change this to be more real translation (idk what good numbers are)
+        else:
+            hor_amt = 0
+
+def doDepth(cmd):
+    if not abs(cmd.camera_y_diff) > 17.5:
+        cmd.left_front_drive_motor,  \
+        cmd.right_front_drive_motor, \
+        cmd.left_back_drive_motor,   \
+        cmd.right_back_drive_motor = mecanum_blend(dep_amt, 0, 0)
+        if cmd.camera_y_diff < 17.5:
+            dep_amt = -0.2 #Change this to be more real translation (idk what good numbers are)
+        elif cmd.camera_y_diff > 17.5:
+            dep_amt = 0.2 #Change this to be more real translation (idk what good numbers are)
+        else:
+            dep_amt = 0
+
 # ======== Autonomous Programs ========
 def get_autonomous_programs(constants):
     raiseArm = RobotCommand()
@@ -192,6 +232,18 @@ def get_autonomous_programs(constants):
     endCommand.wrist_servo_pos = constants["WRIST_STOW"]
     endCommand.claw_servo_pos = constants["CLAW_OPEN"]
 
+    autoRotate = RobotCommand()
+    doRotation(autoRotate)
+    autoCenter = RobotCommand()
+    doCenter(autoCenter)
+    autoDepth = RobotClient()
+    doDepth(autoDepth)
+
+    AutoAlignAutonomous = AutonomousSequence([
+        TimedRobotCommand(autoRotate, 1),
+        TimedRobotCommand(autoCenter, 1),
+        TimedRobotCommand(autoDepth, 1)
+    ])
     #TODO should we bring the back in too?
 
     ScoreOneAutonomous = AutonomousSequence([
