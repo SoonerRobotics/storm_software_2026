@@ -525,10 +525,14 @@ class RobotClient:
             cmd.claw_servo_pos = constants["CLAW_CLOSED"]
 
         # Linear arm extension
-        if s.button_x:
-            cmd.arm_extend_motor = constants["SLIDE_RETRACT_SPEED"]
-        elif s.button_b:
-            cmd.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
+        # only allow extend/retract if the arm is up
+        if self.arm_index > 1:
+            if s.button_x:
+                cmd.arm_extend_motor = constants["SLIDE_RETRACT_SPEED"]
+            elif s.button_b:
+                cmd.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
+            else:
+                cmd.arm_extend_motor = constants["SLIDE_STOW_SPEED"]
         else:
             cmd.arm_extend_motor = constants["SLIDE_STOW_SPEED"]
 
