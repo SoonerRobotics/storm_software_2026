@@ -181,8 +181,6 @@ class AprilTagClient:
             "rot": poses_rot_y[tag_to_use]
         }
 
-        print(payload)
-
         envelope = {
             "sender": self.constants["APRILTAG_NAME"],
             "destination": self.constants["GUI_NAME"], #FIXME we should send to the robot as well

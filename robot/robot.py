@@ -128,14 +128,20 @@ class AutonomousSequence:
 
         self.started = True
     
-    def run(self):
-        if self.commands[self.index].is_done():
-            self.index += 1
+    def run(self) -> TimedRobotCommand:
+        try:
+            if self.commands[self.index].is_done():
+                self.index += 1
+            
+            # if self.index >= (len(self.commands)+1):
+            #     return None
         
-        if self.index >= len(self.commands)+1:
-            return
-        
-        return self.commands[self.index] #FIXME???
+            if self.commands[self.index].time == -1:
+                self.commands[self.index].start()
+        except Exception as e:
+            return None
+            
+        return self.commands[self.index]
 
 class RobotState(Enum):
     OFF = 0
@@ -150,34 +156,55 @@ class ArmState(Enum):
     SCORING_HIGH = 3
 
 # ======== Autonomous Programs ========
-driveForwards = RobotCommand()
-# driveForwards.left_front_drive_motor,  \
-# driveForwards.right_front_drive_motor, \
-# driveForwards.left_back_drive_motor,   \
-# driveForwards.right_back_drive_motor = mecanum_blend(0.4, 0.0, 0.0)
+def get_autonomous_programs(constants):
+    raiseArm = RobotCommand()
+    raiseArm.claw_servo_pos = constants["CLAW_CLOSED"]
+    raiseArm.arm_servo_pos = constants["ARM_BASE_LOW"]
+    raiseArm.wrist_servo_pos = constants["WRIST_STOW"]
 
-extendSlide = RobotCommand()
-# extendSlide.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
+    driveForwards = copy.copy(raiseArm)
+    driveForwards.left_front_drive_motor,  \
+    driveForwards.right_front_drive_motor, \
+    driveForwards.left_back_drive_motor,   \
+    driveForwards.right_back_drive_motor = mecanum_blend(0.4, 0.0, 0.0)
 
-flipWrist = RobotCommand()
-# flipWrist.wrist_servo_pos = constants["WRIST_LEFT"]
+    DriveForwardAutonomous = AutonomousSequence([
+        TimedRobotCommand(driveForwards, 5.0), # 5 seconds
+        TimedRobotCommand(RobotCommand(), 2) # and stop?
+    ])
 
-# need to keep wrist at same position (idk if this is even worth it?)
-openClaw = copy.copy(flipWrist)
-# openClaw.claw_servo_pos = constants["CLAW_OPEN"]
+    extendSlide = copy.copy(raiseArm)
+    extendSlide.arm_extend_motor = constants["SLIDE_EXTEND_SPEED"]
 
-DriveForwardAutonomous = AutonomousSequence([
-    TimedRobotCommand(driveForwards, 5.0), # 5 seconds
-    TimedRobotCommand(RobotCommand(), 2) # and stop?
-])
+    flipWrist = copy.copy(raiseArm)
+    flipWrist.wrist_servo_pos = constants["WRIST_LEFT"]
 
-ScoreOneAutonomous = AutonomousSequence([
-    TimedRobotCommand(driveForwards, 5.0), # position ourselves
-    TimedRobotCommand(RobotCommand(), 2),  # stop
-    TimedRobotCommand(extendSlide, 1),     #FIXME I don't think this is long enough?
-    TimedRobotCommand(flipWrist, 1),       # 1 second should be good? should also automatically not trigger claw?
-    TimedRobotCommand(openClaw, 1),        # do we want to drive further after this?
-])
+    # need to keep wrist at same position (idk if this is even worth it?)
+    openClaw = copy.copy(flipWrist)
+    openClaw.claw_servo_pos = constants["CLAW_OPEN"]
+
+    endCommand = copy.copy(openClaw)
+    endCommand.left_front_drive_motor = 0.0
+    endCommand.right_front_drive_motor = 0.0
+    endCommand.left_back_drive_motor = 0.0
+    endCommand.right_back_drive_motor = 0.0
+
+    endCommand.wrist_servo_pos = constants["WRIST_STOW"]
+    endCommand.claw_servo_pos = constants["CLAW_OPEN"]
+
+    #TODO should we bring the back in too?
+
+    ScoreOneAutonomous = AutonomousSequence([
+        TimedRobotCommand(raiseArm, 1),        # make sure arm is good
+        TimedRobotCommand(driveForwards, 5.0), # position ourselves
+        TimedRobotCommand(RobotCommand(), 2),  # stop
+        TimedRobotCommand(extendSlide, 1),     #FIXME I don't think this is long enough?
+        TimedRobotCommand(flipWrist, 1),       # 1 second should be good? should also automatically not trigger claw?
+        TimedRobotCommand(openClaw, 1),        # do we want to drive further after this?
+        TimedRobotCommand(endCommand, 1)       # bring the slide back in???
+    ])
+
+    return [DriveForwardAutonomous, ScoreOneAutonomous]
 # =====================================
 
 # generate serial message to be sent to Pico
@@ -233,10 +260,10 @@ class RobotClient:
 
         self.default_command = default_command
         self.robot_cmd = default_command
-        self.robot_state = RobotState.TELEOP
+        self.robot_state = RobotState.AUTONOMOUS
 
         self.autonomous_programs = autos
-        self.auto_idx = 0 #FIXME?
+        self.auto_idx = 1 #FIXME?
 
         #TODO FIXME have a callback to check FMS periodically? or like... idk man...
 
@@ -315,7 +342,7 @@ class RobotClient:
                     self.camera_x_diff = payload.get("x_diff")
                     self.camera_y_diff = payload.get("y_diff")
                     self.camera_rot = payload.get("rot")
-                pass #TODO
+                pass 
 
         except Exception as e:
             print(f"[Robot] WS message error: {e}")
@@ -342,14 +369,14 @@ class RobotClient:
         cmd.left_back_drive_motor,   \
         cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)###
 
-        #Auto alignment
+        #Auto alignment: right stick button hold
         if s.right_stick_button:
             rot_dir = 0
             hor_amt = 0 
             dep_amt = 0
             
             #Rotate to face tag
-            while s.right_stick_button and abs(self.camera_rot) > 3:
+            if not abs(self.camera_rot) > 3:
                 
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
@@ -363,7 +390,7 @@ class RobotClient:
                     rot_dir = 0
             
             #Center to tag
-            while s.right_stick_button and abs(self.camera_x_diff) > 0.5:
+            if not abs(self.camera_x_diff) > 0.5:
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
                 cmd.left_back_drive_motor,   \
@@ -376,7 +403,7 @@ class RobotClient:
                     hor_amt = 0
             
             #Depth Alignment
-            while s.right_stick_button and abs(self.camera_y_diff) > 17.5:
+            if not abs(self.camera_y_diff) > 17.5:
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
                 cmd.left_back_drive_motor,   \
@@ -451,10 +478,12 @@ class RobotClient:
     def update_robot_command_from_autonomous(self):
         if not self.autonomous_programs[self.auto_idx].started:
             self.autonomous_programs[self.auto_idx].start()
-        
+
         auto_cmd = self.autonomous_programs[self.auto_idx].run()
         if auto_cmd is not None:
-            self.robot_cmd = auto_cmd
+            self.robot_cmd = auto_cmd.command
+        else:
+            return None #FIXME???
 
     def serial_loop(self):
         while not self.stop_event.is_set():
@@ -465,6 +494,12 @@ class RobotClient:
                     pass #FIXME send like, default command? or no command?
                 elif self.robot_state == RobotState.AUTONOMOUS:
                     self.update_robot_command_from_autonomous()
+
+                    if self.robot_cmd is not None:
+                        cmd = self.robot_cmd
+                        cmd.connected = self.connected_ws
+                    else:
+                        self.robot_state = RobotState.TELEOP
                 elif self.robot_state == RobotState.TELEOP:
                     self.update_robot_command_from_controller()
                     cmd = self.robot_cmd
@@ -519,7 +554,7 @@ if __name__ == "__main__":
     url = constants["COMPETITION_SERVER_URL"] if constants["COMPETITION"] else constants["LOCAL_SERVER_URL"]
     port = constants["COMPETITION_SERVER_PORT"] if constants["COMPETITION"] else constants["LOCAL_SERVER_PORT"]
 
-    robot = RobotClient(f"{url}:{port}", default_robot_command, [DriveForwardAutonomous, ScoreOneAutonomous])
+    robot = RobotClient(f"{url}:{port}", default_robot_command, get_autonomous_programs(constants))
 
     try:
         robot.run()
