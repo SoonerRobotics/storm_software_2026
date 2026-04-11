@@ -342,7 +342,7 @@ class RobotClient:
                     self.camera_x_diff = payload.get("x_diff")
                     self.camera_y_diff = payload.get("y_diff")
                     self.camera_rot = payload.get("rot")
-                pass #TODO
+                pass 
 
         except Exception as e:
             print(f"[Robot] WS message error: {e}")
@@ -369,14 +369,14 @@ class RobotClient:
         cmd.left_back_drive_motor,   \
         cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)###
 
-        #Auto alignment
+        #Auto alignment: right stick button hold
         if s.right_stick_button:
             rot_dir = 0
             hor_amt = 0 
             dep_amt = 0
             
             #Rotate to face tag
-            while s.right_stick_button and abs(self.camera_rot) > 3:
+            if not abs(self.camera_rot) > 3:
                 
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
@@ -390,7 +390,7 @@ class RobotClient:
                     rot_dir = 0
             
             #Center to tag
-            while s.right_stick_button and abs(self.camera_x_diff) > 0.5:
+            if not abs(self.camera_x_diff) > 0.5:
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
                 cmd.left_back_drive_motor,   \
@@ -403,7 +403,7 @@ class RobotClient:
                     hor_amt = 0
             
             #Depth Alignment
-            while s.right_stick_button and abs(self.camera_y_diff) > 17.5:
+            if not abs(self.camera_y_diff) > 17.5:
                 cmd.left_front_drive_motor,  \
                 cmd.right_front_drive_motor, \
                 cmd.left_back_drive_motor,   \
