@@ -213,7 +213,7 @@ def get_autonomous_programs(constants):
     driveForwards.right_back_drive_motor = mecanum_blend(1.0, 0.0, 0.0)
 
     DriveForwardAutonomous = AutonomousSequence([
-        TimedRobotCommand(driveForwards, 5.0), # 5 seconds
+        TimedRobotCommand(driveForwards, 3.0), # 5 seconds
         TimedRobotCommand(RobotCommand(), 2) # and stop?
     ])
 
