@@ -1,0 +1,86 @@
+COMPETITION = true
+
+# --- Networking constants ---
+COMPETITION_SERVER_URL = "ws://10.10.8.79" # where the relay_server executable is running (normally robot? base station? TODO)
+COMPETITION_SERVER_PORT = 1909 # this cannot change so easily, as it is hard-coded in ws_server/relay_server.cpp
+
+# for debugging/testing
+# LOCAL_SERVER_URL = "ws://192.168.1.66"
+LOCAL_SERVER_URL = "ws://192.168.1.93"
+LOCAL_SERVER_PORT = 1909
+
+# sort of like ROS topic names used by the relay_server to identify who to send messages to
+ROBOT_NAME = "robot"
+APRILTAG_NAME = "apriltag"
+APRILTAG_CAMERA_NAME = "apriltag_cam"
+DRIVER_CAMERA_NAME = "driver_cam"
+CONTROLLER_INPUT_NAME = "controller"
+GUI_NAME = "gui"
+STATISTICS_NAME = "statistics"
+LOGGING_NAME = "logger"
+
+
+# --- Robot constants ---
+# serial communication
+SERIAL_PORT = "/dev/ttyACM0"
+BAUD_RATE   = 115200
+START_BYTE = "$" # binary string
+END_BYTE = "!" # binary string
+
+
+# preset positions/speeds
+# STOW = starting configuration, also driving around position
+ARM_BASE_PICK = 0.8
+ARM_BASE_STOW = 0.75
+ARM_BASE_LOW = 0.72
+ARM_BASE_HIGH = 0.65
+ARM_BASE_CLIMB = 0.35
+
+WRIST_STOW = 0.5
+WRIST_PICK = 0.5
+WRIST_LEFT = 0.73
+WRIST_RIGHT = 0.27
+
+CLAW_OPEN = 0.18
+CLAW_CLOSED = 0.13
+
+# linear slide speeds
+SLIDE_EXTEND_SPEED = 0.2
+SLIDE_RETRACT_SPEED = -0.2
+SLIDE_STOW_SPEED = 0.0 # stow speed is 0 because motor keeps it where it is anyways
+
+# intake speed (intake off speed is 0.0, naturally)
+INTAKE_IN_SPEED = -0.5
+INTAKE_OUT_SPEED = 0.5
+
+# climber speeds
+CLIMB_SPEED = -0.75
+
+# absolute maximum, scale of 0-1
+MAX_DRIVE_SPEED = 0.5
+MAX_TURN_SPEED = 0.5
+
+
+# == cameras ==
+# driver camera
+DRIVER_CAM_DEVICE_INDEX = 0 # /dev/video0
+CAM_WIDTH = 360
+CAM_HEIGHT = 140
+CAM_FPS = 20.0 # desired send rate
+
+# apriltag camera
+APRILTAG_CAM_DEVICE_INDEX = 2 # /dev/video1 FIXME
+APRILTAG_JSON_PATH = "./Storm.json"
+APRILTAG_CAM_WIDTH = 640
+APRILTAG_CAM_HEIGHT = 480
+APRILTAG_CAM_FPS = 10.0 # desired send rate
+
+
+# --- Base-station constants ---
+# controller input
+DEADZONE = 0.05 # on a scale of 0.0 to 1.0
+UPDATE_HZ = 50.0 # = 20ms
+
+# logging / statistics
+STATISTICS_UPDATE_INTERVAL = 1 # every this many seconds
+LOGGING_PATH = "~/Documents/log/STORM_2026/"

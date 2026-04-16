@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pink Blush Vision — Dual Camera Station</title>
+<style>
+  :root{
+    --bg:#0f1113;
+    --panel:#15181b;
+    --panel-2:#1b1f23;
+    --panel-3:#212426;
+    --border:#2d3134;
+    --text:#e9eef1;
+    --muted:#9aa4ad;
+    --accent:#1177cc;
+    --accent-2:#1ea7ff;
+    --good:#2f9e44;
+    --warn:#f08c00;
+    --robot:#ffd43b;
+    --danger:#c92a2a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh}
+  #left{flex:1.45;padding:14px;overflow:auto;min-width:0}
+  #right{flex:1.55;padding:14px;border-left:1px solid #202225;overflow:auto;background:linear-gradient(180deg,var(--bg),#101316);min-width:0}
+  h1{margin:12px 0 4px;font-weight:900}
+  canvas{background:#000;border-radius:8px;display:block;max-width:100%;border:1px solid #1d2227}
+  .subhead{color:var(--muted);font-size:13px;margin-bottom:10px}
+  .panel{margin-top:12px;padding:12px;background:var(--panel);border:1px solid #21262b;border-radius:10px}
+  .panel-title{display:block;font-weight:800;margin-bottom:8px}
+  .small{margin-top:6px;color:var(--muted);font-size:12px}
+  pre{background:#0b0d0f;padding:8px;border-radius:6px;margin-top:8px;max-height:220px;overflow:auto;border:1px solid #1d2227}
+  button{background:var(--accent);border:0;color:#fff;padding:9px 10px;border-radius:6px;cursor:pointer;font-weight:700}
+  button:hover{filter:brightness(1.08)}
+  button:active{transform:translateY(1px)}
+  .secondary-btn{background:#2b3137}
+  .map-row{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:10px;align-items:start}
+  .map-frame{padding:12px;background:var(--panel-3);border-radius:8px;border:2px solid var(--border)}
+  .map-container{width:520px;height:260px;max-width:100%;background:linear-gradient(180deg,#25292c,#1f2326);border-radius:6px;position:relative;min-width:0;overflow:visible;isolation:isolate}
+  .tag-button{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--accent-2);border:2px solid #fff;transform:translate(-50%,-50%);cursor:pointer;z-index:3}
+  .tag-label{position:absolute;color:#000;font-weight:700;transform:translate(-50%,-50%);font-size:11px;z-index:3}
+  #robot-icon{position:absolute;width:24px;height:24px;background:var(--robot);border-radius:4px;border:2px solid #000;transform:translate(-50%,-50%);z-index:4}
+  .tag-button{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--accent-2);border:2px solid #fff;transform:translate(-50%,-50%);cursor:pointer}
+  .tag-label{position:absolute;color:#000;font-weight:700;transform:translate(-50%,-50%);font-size:11px}
+  #robot-icon{position:absolute;width:24px;height:24px;background:var(--robot);border-radius:4px;border:2px solid #000;transform:translate(-50%,-50%)}
+  .mini-controls{display:grid;gap:8px;min-width:0}
+  .mini-controls button{width:100%}
+  .readout{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:10px}
+  .readout-label{font-size:12px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+  .readout-value{font-size:16px;font-weight:800}
+  .fms-grid,.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .fms-card,.stat-card{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:10px}
+  .fms-card.full,.stat-card.full{grid-column:1 / -1}
+  .fms-label,.stat-label{font-size:12px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+  .fms-value,.stat-value{font-size:20px;font-weight:800}
+  .status-pill{display:inline-block;padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#2b2f33;color:#d0d7de}
+  .status-pill.connected{background:rgba(47,158,68,.18);color:#8ce99a;border:1px solid rgba(47,158,68,.35)}
+  .status-pill.offline{background:rgba(201,42,42,.18);color:#ffa8a8;border:1px solid rgba(201,42,42,.35)}
+  .button-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-top:8px}
+  .button-grid button.active{background:var(--good)}
+  .command-status{margin-top:8px;font-size:12px;color:var(--muted)}
+  code{color:#c7e6ff}
+  @media (max-width: 1100px){
+    body{flex-direction:column;height:auto}
+    #left,#right{flex:none;border-left:0}
+  }
+  @media (max-width: 760px){
+    .map-row{grid-template-columns:1fr}
+    .fms-grid,.stats-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div id="left">
+  <h1>Pink Blush Vision 
+    <button id="startAutonButton">Start Auto</button>
+  </h1>
+  <div class="subhead">AprilTag navigation camera + driver camera monitor</div>
+  <div style="display:grid;grid-template-columns:1fr;gap:12px;">
+    <div class="panel" style="margin-top:0;">
+      <span class="panel-title">AprilTag Camera</span>
+      <canvas id="video-canvas" width="1000" height="620"></canvas>
+    </div>
+    <div class="panel" style="margin-top:0;">
+      <span class="panel-title">Driver Camera</span>
+      <canvas id="driver-canvas" width="1000" height="620"></canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-title">Pi Health</span>
+    <span id="piStatus" class="status-pill offline">Offline</span>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">CPU Usage</div>
+        <div class="stat-value" id="piCpu">-- %</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">CPU Temp</div>
+        <div class="stat-value" id="piTemp">-- °C</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Memory</div>
+        <div class="stat-value" id="piMem">-- %</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Load</div>
+        <div class="stat-value" id="piLoad">--</div>
+      </div>
+      <div class="stat-card full">
+        <div class="stat-label">System Notes</div>
+        <div class="stat-value" id="piInfo" style="font-size:14px;font-weight:600;">Waiting for Pi telemetry...</div>
+      </div>
+    </div>
+    <div class="small">Recommended Pi fields: CPU usage, CPU temperature, memory usage, load average, hostname, uptime, and IP address.</div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-title">Detections / Pose</span>
+    <pre id="debugOut">ready
+waiting for AprilTag pose from Pi...</pre>
+  </div>
+
+  <div class="panel">
+    <span class="panel-title">System Log</span>
+    <pre id="systemLog">GUI starting...
+</pre>
+  </div>
+</div>
+
+<div id="right">
+  <div class="panel">
+    <span class="panel-title">Field Map</span>
+    <div class="map-row">
+      <div class="map-frame"><div class="map-container" id="mapContainer"><div id="fieldBg" style="position:absolute;inset:0;border-radius:6px;z-index:1;background:linear-gradient(180deg,#2a2f33,#1f2326);"></div></div></div>
+      <div class="mini-controls">
+        <div class="readout">
+          <div class="readout-label">Mode</div>
+          <div class="readout-value" id="modeIndicator">AUTO</div>
+        </div>
+        <div class="readout">
+          <div class="readout-label">Goal</div>
+          <div class="readout-value" id="selected-goal">none</div>
+        </div>
+        <button id="toggleMode">Toggle Manual/Auto</button>
+        <button id="recenter">Center Robot Icon</button>
+        <button id="clearGoal" class="secondary-btn">Clear Goal</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-title">Telemetry</span>
+    <pre id="telemetry">waiting...</pre>
+    <pre id="driverStatus">waiting for driver camera...</pre>
+    <pre id="sent">no motor data</pre>
+  </div>
+
+  <div class="panel">
+    <span class="panel-title">FMS Information</span>
+    <span id="fmsStatus" class="status-pill offline">Offline</span>
+    <div class="fms-grid">
+      <div class="fms-card full">
+        <div class="fms-label">Match Time Left</div>
+        <div class="fms-value" id="fmsTime">--:--</div>
+      </div>
+      <div class="fms-card">
+        <div class="fms-label">Required Voltage</div>
+        <div class="fms-value"><span id="fmsVoltageReq">--</span> V</div>
+      </div>
+      <div class="fms-card">
+        <div class="fms-label">Required RPM</div>
+        <div class="fms-value"><span id="fmsRpmReq">--</span></div>
+      </div>
+    </div>
+    <div class="small">Polled from <code>http://10.0.0.1:5173/api/v1</code></div>
+  </div>
+
+  <div class="panel">
+    <span class="panel-title">Charger Voltage Commands</span>
+    <div class="button-grid" id="voltageButtons">
+      <button data-voltage="2">2 V</button>
+      <button data-voltage="4">4 V</button>
+      <button data-voltage="6">6 V</button>
+      <button data-voltage="8">8 V</button>
+      <button data-voltage="10">10 V</button>
+    </div>
+    <div class="command-status">Selected voltage: <span id="selectedVoltage">none</span></div>
+  </div>
+
+  <div class="panel">
+  <span class="panel-title">Charging Wheel Voltage (L298)</span>
+  <div class="button-grid" id="rpmButtons">
+    <button data-voltage="1">1 V</button>
+    <button data-voltage="2">2 V</button>
+    <button data-voltage="3">3 V</button>
+    <button data-voltage="4">4 V</button>
+    <button data-voltage="5">5 V</button>
+    <button data-voltage="6">6 V</button>
+    <button data-voltage="7">7 V</button>
+    <button data-voltage="8">8 V</button>
+    <button data-voltage="9">9 V</button>
+    <button data-voltage="10">10 V</button>
+    <button data-voltage="11">11 V</button>
+    <button data-voltage="12">12 V</button>
+  </div>
+
+  <div class="small" style="margin-top:10px;">
+    Fine control:
+    <input type="range" id="wheelVoltageSlider" min="1" max="12" step="1" value="6">
+    <span id="wheelVoltageValue">6 V</span>
+  </div>
+
+  <div class="command-status">
+    Selected wheel voltage: <span id="selectedRpm">none</span>
+  </div>
+</div>
+
+<script>
+const RELAY_WS = "ws://10.10.8.79:1909";
+const ROBOT_NAME = "robot";
+const GUI_NAME = "gui";
+const APRILTAG_CAMERA_NAME = "apriltag_cam"; // MUST match constants.toml
+const DRIVER_CAMERA_NAME = "driver_cam";
+
+
+const FMS_BASE_URL = "http://10.0.0.1:5173/api/v1";
+const FMS_POLL_MS = 1000;
+
+const TAG_SIZE_M = 0.0508;
+const IMG_W = 640, IMG_H = 480;
+const fx = 600.0, fy = 600.0, cx = IMG_W/2, cy = IMG_H/2;
+const FIELD_W_IN = 187.017, FIELD_H_IN = 91.117;
+const MAP_PX_W = 520, MAP_PX_H = 260;
+
+const TAGS = {
+  0: {x:187.217,y:71.5,theta:90},
+  1: {x:150.2,y:94.782,theta:0},
+  2: {x:121.6,y:91.117,theta:0},
+  3: {x:70.551,y:91.117,theta:0},
+  4: {x:42.1,y:94.742,theta:0},
+  5: {x:4.983,y:71.4,theta:270},
+  6: {x:42.217,y:43.5,theta:90},
+  7: {x:52.883,y:24.05,theta:270},
+  8: {x:71.6,y:4.883,theta:180},
+  9: {x:119.5,y:4.883,theta:180},
+  10:{x:138.317,y:24.05,theta:90},
+  11:{x:148.983,y:43.5,theta:270}
+};
+
+const K_TURN = 1.2, K_FORWARD = 0.8, DESIRED_STOP = 0.35, MAX_F = 0.6, MAX_T = 1.0;
+const CMD_IDS = {
+  registerGui: 1,
+  motorCmd: 20,
+  setChargeVoltage: 30,
+  setChargeWheelRpm: 31,
+  piTelemetry: 160
+};
+
+const canvas = document.getElementById('video-canvas');
+const ctx = canvas.getContext('2d');
+const driverCanvas = document.getElementById('driver-canvas');
+const driverCtx = driverCanvas.getContext('2d');
+const hiddenCanvas = document.createElement('canvas');
+hiddenCanvas.width = IMG_W;
+hiddenCanvas.height = IMG_H;
+const hiddenCtx = hiddenCanvas.getContext('2d');
+const mapContainer = document.getElementById('mapContainer');
+mapContainer.style.width = MAP_PX_W + 'px';
+mapContainer.style.height = MAP_PX_H + 'px';
+logStatus(`Mini map sized to ${MAP_PX_W}x${MAP_PX_H}`);
+
+function sx(x_in){ const margin = 12; return margin + (x_in / FIELD_W_IN) * (MAP_PX_W - margin*2); }
+function sy(y_in){ const margin = 12; return margin + (1 - (y_in / FIELD_H_IN)) * (MAP_PX_H - margin*2); }
+
+logStatus(`Building ${Object.keys(TAGS).length} point-of-interest buttons on mini map`);
+for (let id in TAGS){
+  const t = TAGS[id];
+  const el = document.createElement('div');
+  el.className = 'tag-button';
+  el.style.left = sx(t.x) + 'px';
+  el.style.top = sy(t.y) + 'px';
+  el.title = 'Tag ' + id;
+  el.dataset.id = id;
+  el.onclick = ()=> setGoal(parseInt(id));
+  mapContainer.appendChild(el);
+  const lbl = document.createElement('div');
+  lbl.className = 'tag-label';
+  lbl.style.left = sx(t.x) + 'px';
+  lbl.style.top = (sy(t.y)+18) + 'px';
+  lbl.textContent = id;
+  mapContainer.appendChild(lbl);
+}
+
+const robotIcon = document.createElement('div');
+robotIcon.id = 'robot-icon';
+robotIcon.style.left = '10px';
+robotIcon.style.top = '10px';
+mapContainer.appendChild(robotIcon);
+
+let mode = 'AUTO';
+let currentGoalTag = null;
+let poseEstimate = null;
+let detector = null;
+let cvReady = false;
+let relaySocket = null;
+let frameBusy = false;
+let pendingFrameB64 = null;
+let driverFrameBusy = false;
+let pendingDriverFrameB64 = null;
+let fmsBusy = false;
+let lastVoltage = null;
+let lastRpm = null;
+
+document.getElementById('modeIndicator').textContent = mode;
+document.getElementById('toggleMode').onclick = ()=> {
+  mode = (mode==='AUTO') ? 'MANUAL' : 'AUTO';
+  document.getElementById('modeIndicator').textContent = mode;
+  if(mode==='MANUAL'){ sendMotorString('M0,0,0,0'); }
+};
+document.getElementById('recenter').onclick = ()=> { if(poseEstimate) updateRobotIcon(poseEstimate); };
+document.getElementById('clearGoal').onclick = ()=> { currentGoalTag=null; document.getElementById('selected-goal').textContent='none'; };
+
+function logStatus(message){
+  const el = document.getElementById('systemLog');
+  if(!el) return;
+  const ts = new Date().toLocaleTimeString();
+  const line = `[${ts}] ${message}`;
+  const lines = el.textContent.split('\n').filter(Boolean);
+  lines.push(line);
+  el.textContent = lines.slice(-25).join('\n') + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+function startRelayWS(){
+  relaySocket = new WebSocket(RELAY_WS);
+  logStatus(`Connecting to relay ${RELAY_WS} ...`);
+  relaySocket.onopen = ()=> {
+    logStatus('Relay WebSocket connected');
+    relaySocket.send(JSON.stringify({
+      sender: GUI_NAME,
+      destination: ROBOT_NAME,
+      data: JSON.stringify({ id: CMD_IDS.registerGui, action: 'register_gui' })
+    }));
+    logStatus('GUI registration sent to robot');
+  };
+
+  relaySocket.onmessage = (e)=> {
+    try{
+      const msg = JSON.parse(e.data);
+      if (msg.destination !== GUI_NAME) return;
+
+      const sender = msg.sender;
+      const payload = JSON.parse(msg.data);
+      console.log('relay in', sender, payload.id, payload);
+
+      if (payload.id === 140 && payload.frame_b64) {
+        pendingFrameB64 = payload.frame_b64;
+        logStatus(`AT camera frame received from ${sender} (${payload.frame_b64.length} chars)`);
+        if (!frameBusy) consumeLatestFrame();
+      } else if (sender === DRIVER_CAMERA_NAME && payload.id === 131 && payload.frame_b64) {
+        pendingDriverFrameB64 = payload.frame_b64;
+        document.getElementById('driverStatus').textContent = 'driver camera frame received';
+        logStatus(`Driver camera frame received from ${sender} (${payload.frame_b64.length} chars)`);
+        if (!driverFrameBusy) consumeDriverFrame();
+      } else if (payload.id === 141) {
+        logStatus(`AprilTag pose received: tag ${payload.ids}, x=${payload.x}, y=${payload.y}`);
+        updatePoseFromAprilTag(payload);
+      } else if (payload.id === 170) {
+        updatePiHealth(payload);
+      } else {
+        logStatus(`Unhandled relay message from ${sender} with id ${payload.id}`);
+      }
+    }catch(err){
+      console.warn('relay parse err', err);
+      logStatus('Relay parse error');
+    }
+  };
+
+  relaySocket.onclose = (e)=> {
+    logStatus(`Relay WebSocket closed (${e.code}) ${e.reason || ''}`.trim());
+  };
+
+  relaySocket.onerror = ()=> {
+    logStatus('Relay WebSocket error');
+  };
+}
+
+function consumeLatestFrame(){
+  if(!pendingFrameB64 || frameBusy) return;
+  frameBusy = true;
+  const frame = pendingFrameB64;
+  pendingFrameB64 = null;
+  drawRobotFrame(frame).finally(()=>{
+    frameBusy = false;
+    if(pendingFrameB64) consumeLatestFrame();
+  });
+}
+
+function consumeDriverFrame(){
+  if(!pendingDriverFrameB64 || driverFrameBusy) return;
+  driverFrameBusy = true;
+  const frame = pendingDriverFrameB64;
+  pendingDriverFrameB64 = null;
+  drawDriverFrame(frame).finally(()=>{
+    driverFrameBusy = false;
+    if(pendingDriverFrameB64) consumeDriverFrame();
+  });
+}
+
+function drawDriverFrame(imageB64){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = ()=> {
+      try{
+        driverCtx.clearRect(0,0,driverCanvas.width,driverCanvas.height);
+        driverCtx.drawImage(img,0,0,driverCanvas.width,driverCanvas.height);
+        document.getElementById('driverStatus').textContent = 'driver camera active';
+        resolve();
+      }catch(err){ logStatus('Driver frame draw error: ' + err); reject(err); }
+    };
+    img.onerror = ()=> { logStatus('Failed to decode driver JPEG frame'); reject(new Error('failed to decode driver JPEG frame')); };
+    img.src = `data:image/jpeg;base64,${imageB64}`;
+  });
+}
+
+function drawRobotFrame(imageB64){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = ()=> {
+      try{
+        hiddenCtx.clearRect(0,0,IMG_W,IMG_H);
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        hiddenCtx.drawImage(img,0,0,IMG_W,IMG_H);
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        const idata = hiddenCtx.getImageData(0,0,IMG_W,IMG_H);
+        const gray = rgbaToGray(idata.data, IMG_W, IMG_H);
+        // AprilTag pose now comes from Pi (payload.id === 141)
+        document.getElementById('debugOut').textContent = 'frame received, awaiting AprilTag pose from Pi...';
+        resolve();
+      }catch(err){ logStatus('Frame draw error: ' + err); reject(err); }
+    };
+    img.onerror = ()=> { logStatus('Failed to decode JPEG frame'); reject(new Error('failed to decode JPEG frame')); };
+    img.src = `data:image/jpeg;base64,${imageB64}`;
+  });
+}
+
+function rgbaToGray(rgba, w, h){
+  const out = new Uint8Array(w*h);
+  for(let i=0,j=0;i<rgba.length;i+=4,j++) out[j] = (0.299*rgba[i] + 0.587*rgba[i+1] + 0.114*rgba[i+2])|0;
+  return out;
+}
+
+function updatePoseFromAprilTag(p){
+  // p: payload from Pi AprilTag client, id 141
+  if (p == null) return;
+  const x_in = p.x;
+  const y_in = p.y;
+  const heading_deg = p.heading;
+  if (typeof x_in !== 'number' || typeof y_in !== 'number' || typeof heading_deg !== 'number') {
+    return;
+  }
+  const yaw_rad = heading_deg * Math.PI / 180.0;
+  poseEstimate = {
+    x_m: x_in * 0.0254,
+    y_m: y_in * 0.0254,
+    yaw: yaw_rad
+  };
+  // Update debug info with AprilTag pose and alignment deltas
+  try {
+    const dbg = {
+      id: p.ids,
+      x_in: x_in.toFixed(2),
+      y_in: y_in.toFixed(2),
+      heading_deg: heading_deg.toFixed(1),
+      x_diff: (p.x_diff ?? 0).toFixed(2),
+      y_diff: (p.y_diff ?? 0).toFixed(2),
+      rot: (p.rot ?? 0).toFixed(1)
+    };
+    document.getElementById('debugOut').textContent = JSON.stringify(dbg, null, 2);
+  } catch(e) {
+    document.getElementById('debugOut').textContent = 'pose update error: ' + e;
+  }
+  updateRobotIcon(poseEstimate);
+  if(mode === 'AUTO' && currentGoalTag !== null){
+    autopilotStep();
+  }
+}
+
+function updateRobotIcon(p){
+  if(!p){ robotIcon.style.display='none'; return; }
+  robotIcon.style.display='block';
+  const x_in = p.x_m / 0.0254, y_in = p.y_m / 0.0254;
+  robotIcon.style.left = sx(x_in) + 'px';
+  robotIcon.style.top  = sy(y_in) + 'px';
+  robotIcon.style.transform = `translate(-50%,-50%) rotate(${(p.yaw*180/Math.PI)}deg)`;
+  document.getElementById('telemetry').textContent = `x=${p.x_m.toFixed(2)} m y=${p.y_m.toFixed(2)} m yaw=${(p.yaw*180/Math.PI).toFixed(1)}°`;
+}
+
+function autopilotStep(){
+  if(!poseEstimate) return;
+  const goal = TAGS[currentGoalTag];
+  if(!goal) return;
+  const gx = goal.x * 0.0254, gy = goal.y * 0.0254;
+  const gtheta = goal.theta * Math.PI/180.0;
+  const dx = gx - poseEstimate.x_m, dy = gy - poseEstimate.y_m;
+  const cosr = Math.cos(-poseEstimate.yaw), sinr = Math.sin(-poseEstimate.yaw);
+  const x_r = cosr*dx - sinr*dy;
+  const y_r = sinr*dx + cosr*dy;
+  const bearing = Math.atan2(y_r, x_r);
+  let forward = clamp(K_FORWARD * (x_r - DESIRED_STOP), -MAX_F, MAX_F);
+  let turn = clamp(-K_TURN * bearing, -MAX_T, MAX_T);
+  const dist = Math.hypot(x_r,y_r);
+  if(dist < 0.45){
+    const yaw_err = angleDiff(gtheta + Math.PI, poseEstimate.yaw);
+    turn = clamp(K_TURN * yaw_err, -MAX_T, MAX_T);
+    forward = 0;
+    if(Math.abs(yaw_err) < (6*Math.PI/180)){
+      sendMotorString('M0,0,0,0');
+      document.getElementById('selected-goal').textContent = 'arrived ' + currentGoalTag;
+      currentGoalTag = null;
+      return;
+    }
+  }
+  sendMotorVelocity(forward, turn);
+}
+
+function sendMotorVelocity(forward, turn){
+  const sf = v => Math.round(v * 255);
+  const fl = clamp(-forward + turn, -1, 1);
+  const fr = clamp(-forward - turn, -1, 1);
+  const rl = clamp(forward + turn, -1, 1);
+  const rr = clamp(forward - turn, -1, 1);
+  sendMotorString(`M${sf(fl)},${sf(fr)},${sf(rl)},${sf(rr)}`);
+}
+
+function sendMotorString(msg){
+  document.getElementById('sent').textContent = msg;
+  if(relaySocket && relaySocket.readyState === WebSocket.OPEN){
+    relaySocket.send(JSON.stringify({
+      sender: GUI_NAME,
+      destination: ROBOT_NAME,
+      data: JSON.stringify({ id: CMD_IDS.motorCmd, motor_cmd: msg })
+    }));
+  }
+}
+
+function sendChargerVoltage(volts){
+  logStatus(`Voltage command sent: ${volts} V`);
+  lastVoltage = volts;
+  document.getElementById('selectedVoltage').textContent = `${volts} V`;
+  highlightButtonGroup('#voltageButtons button', 'data-voltage', String(volts));
+  if(relaySocket && relaySocket.readyState === WebSocket.OPEN){
+    relaySocket.send(JSON.stringify({
+      sender: GUI_NAME,
+      destination: ROBOT_NAME,
+      data: JSON.stringify({ id: CMD_IDS.setChargeVoltage, command: 'set_charge_voltage', voltage: volts })
+    }));
+  }
+}
+
+function sendWheelVoltage(volts){
+  logStatus(`Wheel voltage command sent: ${volts} V`);
+  lastRpm = volts;  // reuse variable name, now meaning "wheel volts"
+  document.getElementById('selectedRpm').textContent = `${volts} V`;
+  highlightButtonGroup('#rpmButtons button', 'data-voltage', String(volts));
+
+  // Map 0–12 V request to 0–1 duty cycle; robot.py will convert to 0–255 PWM for L298.
+  const duty = Math.min(Math.max(volts*(2/11)-(13/11), -1), 1);
+
+  if(relaySocket && relaySocket.readyState === WebSocket.OPEN){
+    relaySocket.send(JSON.stringify({
+      sender: GUI_NAME,
+      destination: ROBOT_NAME,
+      data: JSON.stringify({
+        id: CMD_IDS.setChargeWheelRpm,        // keep ID 31 so robot.py route stays the same
+        command: 'set_charge_wheel_voltage',  // new semantic command string
+        volts: volts,                         // physical request in volts
+        duty: duty                            // normalized for L298 PWM
+      })
+    }));
+  }
+}
+function highlightButtonGroup(selector, dataAttr, activeValue){
+  document.querySelectorAll(selector).forEach(btn => btn.classList.toggle('active', btn.getAttribute(dataAttr) === activeValue));
+}
+
+function updatePiHealth(payload){
+  logStatus('Pi telemetry update received');
+  document.getElementById('piCpu').textContent = payload.cpu_percent != null ? `${payload.cpu_percent}%` : '-- %';
+  document.getElementById('piTemp').textContent = payload.temperature != null ? `${Number(payload.temperature).toFixed(1)} °C` : '-- °C';
+  document.getElementById('piMem').textContent = payload.ram_percent != null ? `${payload.ram_percent}%` : '-- %';
+  document.getElementById('piLoad').textContent = payload.cpu_frequency != null ? String(payload.cpu_frequency) : '--';
+  const notes = [];
+  if(payload.hostname) notes.push(`Host: ${payload.hostname}`);
+  if(payload.uptime) notes.push(`Uptime: ${payload.uptime}`);
+  if(payload.ip_address) notes.push(`IP: ${payload.ip_address}`);
+  document.getElementById('piInfo').textContent = notes.length ? notes.join(' • ') : 'Pi telemetry connected';
+  const el = document.getElementById('piStatus');
+  el.textContent = 'Connected';
+  el.className = 'status-pill connected';
+}
+
+function formatMatchTime(totalSec){
+  if(typeof totalSec !== 'number' || !Number.isFinite(totalSec)) return '--:--';
+  const sec = Math.max(0, Math.round(totalSec));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+async function pollFms(){
+  if(fmsBusy) return;
+  fmsBusy = true;
+  try{
+    const [matchResp, timeResp] = await Promise.all([
+      fetch(`${FMS_BASE_URL}/match`, { method: 'GET' }),
+      fetch(`${FMS_BASE_URL}/time`, { method: 'GET' })
+    ]);
+
+    if(matchResp.status === 200){
+      const matchData = await matchResp.json();
+      document.getElementById('fmsVoltageReq').textContent = matchData.requiredVoltage ?? '--';
+      document.getElementById('fmsRpmReq').textContent = matchData.requiredRpm ?? '--';
+    } else {
+      document.getElementById('fmsVoltageReq').textContent = '--';
+      document.getElementById('fmsRpmReq').textContent = '--';
+    }
+
+    if(timeResp.status === 200){
+      const timeData = await timeResp.json();
+      document.getElementById('fmsTime').textContent = formatMatchTime(timeData.time);
+    } else {
+      document.getElementById('fmsTime').textContent = '--:--';
+    }
+
+    const connected = (matchResp.status === 200 || timeResp.status === 200);
+    const el = document.getElementById('fmsStatus');
+    el.textContent = connected ? 'Connected' : 'No Match';
+    el.className = `status-pill ${connected ? 'connected' : 'offline'}`;
+    logStatus(connected ? 'FMS poll OK' : 'FMS reports no active/upcoming match');
+  }catch(err){
+    logStatus('FMS poll failed');
+    const el = document.getElementById('fmsStatus');
+    el.textContent = 'Offline';
+    el.className = 'status-pill offline';
+    document.getElementById('fmsTime').textContent = '--:--';
+    document.getElementById('fmsVoltageReq').textContent = '--';
+    document.getElementById('fmsRpmReq').textContent = '--';
+  }finally{
+    fmsBusy = false;
+    setTimeout(pollFms, FMS_POLL_MS);
+  }
+}
+
+function clamp(v,a=-Infinity,b=Infinity){ return Math.max(a,Math.min(b,v)); }
+function angleDiff(a,b){ let d=a-b; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI; return d; }
+function setGoal(id){ currentGoalTag = id; document.getElementById('selected-goal').textContent = id; }
+
+function bindCommandButtons(){
+  // existing charger voltage buttons
+  document.querySelectorAll('#voltageButtons button').forEach(btn =>
+    btn.addEventListener('click', () =>
+      sendChargerVoltage(Number(btn.dataset.voltage)))
+  );
+
+  // new charging wheel voltage buttons
+  document.querySelectorAll('#rpmButtons button').forEach(btn =>
+    btn.addEventListener('click', () =>
+      sendWheelVoltage(Number(btn.dataset.voltage)))
+  );
+
+  // fine slider for wheel voltage
+  const wSlider = document.getElementById('wheelVoltageSlider');
+  const wValue = document.getElementById('wheelVoltageValue');
+  if (wSlider && wValue) {
+    wSlider.addEventListener('input', () => {
+      const v = Number(wSlider.value);
+      wValue.textContent = `${v} V`;
+    });
+    wSlider.addEventListener('change', () => {
+      const v = Number(wSlider.value);
+      sendWheelVoltage(v);
+    });
+  }
+
+  document.getElementById("startAutonButton").addEventListener('click', () => {
+    logStatus(`starting autonomous!`);
+
+    if(relaySocket && relaySocket.readyState === WebSocket.OPEN){
+      relaySocket.send(JSON.stringify({
+        sender: GUI_NAME,
+        destination: ROBOT_NAME,
+        data: JSON.stringify({
+          id: 6767,
+          state: 'AUTONOMOUS',
+        })
+      }));
+    }
+  })
+}
+
+async function init(){
+  try{
+    bindCommandButtons();
+    startRelayWS();
+    pollFms();
+    document.getElementById('debugOut').textContent = 'ready\nwaiting for AprilTag pose from Pi...';
+    logStatus('GUI ready; waiting for AprilTag camera frames and pose messages');
+  }catch(err){
+    document.getElementById('debugOut').textContent = 'init error: ' + err;
+  }
+}
+init();
+</script>
+</body>
+</html>

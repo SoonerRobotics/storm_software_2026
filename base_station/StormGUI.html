@@ -1,0 +1,434 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Robot Camera GUI</title>
+<style>
+  body{margin:0;font-family:Inter,Arial;background:#0f1113;color:#e9eef1;display:flex;height:100vh}
+  #left{flex:2;padding:14px;overflow:hidden}
+  #right{flex:1;padding:14px;border-left:1px solid #202225;overflow:auto}
+  h1{margin:6px 0;font-weight:600}
+  canvas{background:#000;border-radius:6px;display:block}
+  .map-container{width:360px;height:180px;background:#212426;border-radius:6px;border:2px solid #2d3134;position:relative;margin-top:10px}
+  .tag-button{position:absolute;width:18px;height:18px;border-radius:50%;background:#1ea7ff;border:2px solid #fff;transform:translate(-50%,-50%);cursor:pointer}
+  .tag-label{position:absolute;color:#000;font-weight:700;transform:translate(-50%,-50%);font-size:11px}
+  #robot-icon{position:absolute;width:22px;height:22px;background:#ffd43b;border-radius:4px;border:2px solid #000;transform:translate(-50%,-50%)}
+  .controls{margin-top:12px}
+  button{background:#1177cc;border:0;color:#fff;padding:8px;border-radius:6px;cursor:pointer}
+  .toggle{display:inline-block;margin-left:10px;padding:6px 10px;border-radius:6px;background:#222;border:1px solid #333}
+  pre{background:#0b0d0f;padding:8px;border-radius:6px;margin-top:8px;max-height:220px;overflow:auto}
+</style>
+</head>
+<body>
+
+<div id="left">
+  <div style="justify-items: center;justify-self: center;justify-content: center;">
+    <h1 style="display: inline-block">Pink Blush Vision</h1>
+    <button id="startMatch" style="display: inline-block; padding-left: 8px">Start Match</button>
+    <div style="display: inline-block; font-size: 18pt; padding-left: 8px">Time Remaining: <span id="timeRemaining">00:00</span></div>
+  </div>
+  <canvas id="video-canvas" width="1080" height="640"></canvas>
+  <div style="margin-top:10px;">
+    Mode:
+    <span class="toggle" id="modeIndicator">MANUAL</span>
+    <button id="toggleMode">Toggle Manual/Auto</button>
+    <button id="recenter">Center Robot Icon</button>
+  </div>
+
+  <div class="controls">
+    <label>Goal: <span id="selected-goal">none</span></label>
+    <button id="clearGoal">Clear</button>
+  </div>
+
+  <div style="margin-top:8px;">
+    <strong>Status</strong>
+    <pre id="debugOut">waiting for camera frames</pre>
+  </div>
+</div>
+
+<div id="right">
+  <h1>Field Map</h1>
+  <div class="map-container" id="mapContainer"></div>
+
+  <div style="margin-top:12px;">
+    <strong>WebSockets</strong>
+    <div>Relay WS: <code id="camWsLabel"></code></div>
+    <div>Motor WS: <code id="motorWsLabel"></code></div>
+  </div>
+
+  <div style="margin-top:12px;">
+    <strong>Telemetry</strong>
+    <pre id="telemetry">pose unavailable in this page</pre>
+    <pre id="sent">no motor data</pre>
+  </div>
+
+  <div style="margin-top:12px;">
+    <strong>Gamepad</strong>
+    <div id="gpStatus">No gamepad</div>
+    <div style="margin-top:6px;"><small>When in MANUAL mode, the gamepad controls motors</small></div>
+  </div>
+
+  <div style="margin-top:12px;">
+    <strong>Pi Statistics</strong>
+    <div style="font-weight: bold;margin-top: 2px;">CPU Utilization: <span style="font-weight: normal;" id="cpu_usage">No CPU</span>%</div>
+    <div style="font-weight: bold;margin-top: 2px;">CPU Frequency: <span style="font-weight: normal;" id="cpu_frequency">No frequeny</span> GHz</div>
+    <div style="font-weight: bold;margin-top: 2px;">RAM Utilization: <span style="font-weight: normal;" id="ram_percent">No RAM</span>%</div>
+    <div style="font-weight: bold;margin-top: 2px;">CPU Temperature: <span style="font-weight: normal;" id="temperature">No temperature</span> *F</div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   CONFIG - EDIT THESE
+   ========================= */
+// const RELAY_WS = "ws://192.168.8.174:1909";
+const RELAY_WS = "ws://127.0.0.1:1909";
+const ROBOT_NAME = "robot";
+const GUI_NAME = "gui";
+const CAMERA_NAME = "driver_camera"; // should match constants["DRIVER_CAMERA_NAME"]
+
+const IMG_W = 640, IMG_H = 480;
+const FIELD_W_IN = 187.017, FIELD_H_IN = 91.117;
+const MAP_PX_W = 360, MAP_PX_H = 180;
+
+/* your tags in inches / degrees */
+const TAGS = {
+  0: {x:4.783,y:24.5,theta:0},
+  1: {x:41.8,y:1.258,theta:90},
+  2: {x:70.4,y:1.258,theta:90},
+  3: {x:121.449,y:4.883,theta:90},
+  4: {x:149.9,y:1.258,theta:90},
+  5: {x:187.017,y:24.6,theta:180},
+  6: {x:149.783,y:52.5,theta:0},
+  7: {x:139.117,y:71.95,theta:180},
+  8: {x:120.4,y:91.117,theta:270},
+  9: {x:72.5,y:91.117,theta:270},
+  10:{x:53.683,y:71.95,theta:0},
+  11:{x:43.017,y:52.5,theta:180}
+};
+
+const K_TURN = 1.2, K_FORWARD = 0.8, DESIRED_STOP = 0.35, MAX_F = 0.6, MAX_T = 1.0;
+
+/* =========================
+   END CONFIG
+   ========================= */
+
+/* UI + map setup */
+const canvas = document.getElementById('video-canvas');
+const ctx = canvas.getContext('2d');
+const mapContainer = document.getElementById('mapContainer');
+mapContainer.style.width = MAP_PX_W + 'px';
+mapContainer.style.height = MAP_PX_H + 'px';
+document.getElementById('camWsLabel').textContent = RELAY_WS;
+document.getElementById('motorWsLabel').textContent = RELAY_WS;
+
+/* scale helpers (in -> px) */
+function sx(x_in){ return (x_in / FIELD_W_IN) * MAP_PX_W; }
+function sy(y_in){ return (1 - (y_in / FIELD_H_IN)) * MAP_PX_H; }
+
+/* build tag buttons */
+for (let id in TAGS){
+  const t = TAGS[id];
+  const el = document.createElement('div');
+  el.className = 'tag-button';
+  el.style.left = sx(t.x) + 'px';
+  el.style.top = sy(t.y) + 'px';
+  el.title = 'Tag ' + id;
+  el.dataset.id = id;
+  el.onclick = ()=> setGoal(parseInt(id));
+  mapContainer.appendChild(el);
+
+  const lbl = document.createElement('div');
+  lbl.className = 'tag-label';
+  lbl.style.left = sx(t.x) + 'px';
+  lbl.style.top = (sy(t.y)+18) + 'px';
+  lbl.textContent = id;
+  mapContainer.appendChild(lbl);
+}
+
+/* robot icon */
+const robotIcon = document.createElement('div');
+robotIcon.id = 'robot-icon';
+robotIcon.style.left = '10px';
+robotIcon.style.top = '10px';
+mapContainer.appendChild(robotIcon);
+
+/* state */
+let mode = 'MANUAL';
+let currentGoalTag = null;
+let poseEstimate = null; // left in place so existing functions still work
+let relaySocket = null;
+let lastSent = '';
+let frameBusy = false;
+let pendingFrameB64 = null;
+let lastFrameTimestamp = 0;
+let timeRemaining = -1; // temporary value
+
+document.getElementById('modeIndicator').textContent = mode;
+document.getElementById('toggleMode').onclick = ()=> {
+  mode = (mode==='AUTO') ? 'MANUAL' : 'AUTO';
+  document.getElementById('modeIndicator').textContent = mode;
+  if(mode==='MANUAL'){ sendMotorString(`M0,0,0,0`); }
+};
+document.getElementById('recenter').onclick = ()=> { if(poseEstimate) updateRobotIcon(poseEstimate); };
+document.getElementById('clearGoal').onclick = ()=> {
+  currentGoalTag = null;
+  document.getElementById('selected-goal').textContent = 'none';
+};
+
+document.getElementById("startMatch").onclick = () => {
+  timeRemaining = 4*60;
+
+  // send the 'start match' message
+  if(relaySocket && relaySocket.readyState === WebSocket.OPEN) {
+    relaySocket.send(JSON.stringify({
+      sender: GUI_NAME,
+      destination: ROBOT_NAME,
+      data: JSON.stringify({
+        id: 20, // match state message
+        time_remaining: timeRemaining
+      })
+    }));
+  }
+
+  var intervalId = window.setInterval(function() {
+    timeRemaining -= 1;
+    if (timeRemaining <= 0) {
+      document.getElementById("timeRemaining").innerHTML = "END";
+      window.clearInterval(intervalId);
+    }
+
+    //FIXME send the websocket time remaining messages?
+
+    document.getElementById("timeRemaining").innerHTML = new Date(timeRemaining * 1000).toISOString().substr(11, 8).substr(3,);
+  }, 1000);
+}
+
+/* Gamepad override in MANUAL mode */
+let gpIndex = null;
+window.addEventListener('gamepadconnected',(e)=>{
+  gpIndex = e.gamepad.index;
+  document.getElementById('gpStatus').textContent = 'Gamepad connected: ' + e.gamepad.id;
+});
+window.addEventListener('gamepaddisconnected',()=>{
+  gpIndex = null;
+  document.getElementById('gpStatus').textContent = 'No gamepad';
+});
+
+function manualGamepadLoop(){
+  if(mode!=='MANUAL' || gpIndex===null) return;
+  const gp = navigator.getGamepads()[gpIndex];
+  if(!gp) return;
+
+  const forward = -gp.axes[1];
+  const turn = gp.axes[2];
+  sendMotorVelocity(forward*0.6, turn*0.8);
+}
+setInterval(manualGamepadLoop, 50);
+
+/* relay websocket for camera + robot commands */
+function startRelayWS(){
+  relaySocket = new WebSocket(RELAY_WS);
+
+  relaySocket.onopen = ()=> {
+    console.log('relay ws open');
+
+    relaySocket.send(JSON.stringify({
+      sender: GUI_NAME,
+      destination: ROBOT_NAME,
+      data: JSON.stringify({
+        id: 1,
+        action: "register_gui"
+      })
+    }));
+
+    document.getElementById('debugOut').textContent = 'relay connected, waiting for frames';
+  };
+
+  relaySocket.onmessage = (e)=> {
+    try{
+      const msg = JSON.parse(e.data);
+      if(msg.destination !== GUI_NAME) return;
+
+      const payload = JSON.parse(msg.data);
+
+      if((msg.sender === CAMERA_NAME || payload.id === 20 || payload.id === 131) && payload.frame_b64){
+        pendingFrameB64 = payload.frame_b64;
+        if(!frameBusy) consumeLatestFrame();
+        return;
+      }
+
+      if(payload.id === 141){
+        document.getElementById('debugOut').textContent = 'AprilTag data moved to separate feed';
+        return;
+      }
+
+      else if (payload.id === 170) {
+        document.getElementById("cpu_usage").innerHTML = payload.cpu_percent;
+        document.getElementById("cpu_frequency").innerHTML = payload.cpu_frequency;
+        document.getElementById("ram_percent").innerHTML = payload.ram_percent;
+        document.getElementById("temperature").innerHTML = payload.temperature;
+      }
+
+      console.log('relay in', payload);
+    }catch(err){
+      console.warn('relay parse err', err);
+      document.getElementById('debugOut').textContent = 'relay parse err: ' + err;
+    }
+  };
+
+  relaySocket.onclose = ()=> {
+    console.log('relay ws close');
+    document.getElementById('debugOut').textContent = 'relay disconnected';
+  };
+
+  relaySocket.onerror = (e)=> {
+    console.warn('relay ws err', e);
+    document.getElementById('debugOut').textContent = 'relay websocket error';
+  };
+}
+
+function consumeLatestFrame(){
+  if(!pendingFrameB64 || frameBusy) return;
+
+  frameBusy = true;
+  const frame = pendingFrameB64;
+  pendingFrameB64 = null;
+
+  drawRobotFrame(frame)
+    .catch(err => {
+      console.warn('frame draw error', err);
+      document.getElementById('debugOut').textContent = 'frame draw error: ' + err;
+    })
+    .finally(()=>{
+      frameBusy = false;
+      if(pendingFrameB64) consumeLatestFrame();
+    });
+}
+
+function drawRobotFrame(imageB64){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+
+    img.onload = ()=> {
+      try{
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        lastFrameTimestamp = Date.now();
+        document.getElementById('debugOut').textContent = 'camera frame received';
+        resolve();
+      }catch(err){
+        reject(err);
+      }
+    };
+
+    img.onerror = ()=> reject(new Error('failed to decode JPEG frame'));
+    img.src = `data:image/jpeg;base64,${imageB64}`;
+  });
+}
+
+/* update robot icon */
+function updateRobotIcon(p){
+  if(!p){
+    robotIcon.style.display='none';
+    return;
+  }
+  robotIcon.style.display='block';
+  const x_in = p.x_m / 0.0254;
+  const y_in = p.y_m / 0.0254;
+  robotIcon.style.left = sx(x_in) + 'px';
+  robotIcon.style.top  = sy(y_in) + 'px';
+  robotIcon.style.transform = `translate(-50%,-50%) rotate(${(p.yaw*180/Math.PI)}deg)`;
+  document.getElementById('telemetry').textContent =
+    `x=${p.x_m.toFixed(2)} m y=${p.y_m.toFixed(2)} m yaw=${(p.yaw*180/Math.PI).toFixed(1)}°`;
+}
+
+/* autopilot controller placeholder: kept so other functions remain */
+function autopilotStep(){
+  if(!poseEstimate || currentGoalTag===null) return;
+
+  const goal = TAGS[currentGoalTag];
+  if(!goal) return;
+
+  const gx = goal.x * 0.0254;
+  const gy = goal.y * 0.0254;
+  const gtheta = goal.theta * Math.PI/180.0;
+  const dx = gx - poseEstimate.x_m;
+  const dy = gy - poseEstimate.y_m;
+  const cosr = Math.cos(-poseEstimate.yaw);
+  const sinr = Math.sin(-poseEstimate.yaw);
+  const x_r = cosr*dx - sinr*dy;
+  const y_r = sinr*dx + cosr*dy;
+  const bearing = Math.atan2(y_r, x_r);
+
+  let forward = clamp(K_FORWARD * (x_r - DESIRED_STOP), -MAX_F, MAX_F);
+  let turn = clamp(-K_TURN * bearing, -MAX_T, MAX_T);
+
+  const dist = Math.hypot(x_r,y_r);
+  if(dist < 0.45){
+    const yaw_err = angleDiff(gtheta + Math.PI, poseEstimate.yaw);
+    turn = clamp(K_TURN * yaw_err, -MAX_T, MAX_T);
+    forward = 0;
+    if(Math.abs(yaw_err) < (6*Math.PI/180)){
+      sendMotorString('M0,0,0,0');
+      document.getElementById('selected-goal').textContent = 'arrived ' + currentGoalTag;
+      currentGoalTag = null;
+      return;
+    }
+  }
+
+  sendMotorVelocity(forward, turn);
+}
+
+/* mixing -> motor string Mfl,fr,rl,rr */
+function sendMotorVelocity(forward, turn){
+  const strafe = 0;
+  let fl = clamp(-forward + strafe + turn, -1, 1);
+  let fr = clamp(-forward - strafe - turn, -1, 1);
+  let rl = clamp(forward - strafe + turn, -1, 1);
+  let rr = clamp(forward + strafe - turn, -1, 1);
+  const sf = v => Math.round(v * 255);
+  const msg = `M${sf(fl)},${sf(fr)},${sf(rl)},${sf(rr)}`;
+  sendMotorString(msg);
+}
+
+function sendMotorString(msg){
+  lastSent = msg;
+  document.getElementById('sent').textContent = msg;
+
+  if(relaySocket && relaySocket.readyState === WebSocket.OPEN){
+    relaySocket.send(JSON.stringify({
+      sender: GUI_NAME,
+      destination: ROBOT_NAME,
+      data: JSON.stringify({
+        id: 20,
+        motor_cmd: msg
+      })
+    }));
+  }
+}
+
+/* helpers */
+function clamp(v,a=-Infinity,b=Infinity){ return Math.max(a,Math.min(b,v)); }
+function angleDiff(a,b){
+  let d = a - b;
+  while(d > Math.PI) d -= 2*Math.PI;
+  while(d < -Math.PI) d += 2*Math.PI;
+  return d;
+}
+
+/* set goal */
+function setGoal(id){
+  currentGoalTag = id;
+  document.getElementById('selected-goal').textContent = id;
+}
+
+/* init everything */
+function init(){
+  startRelayWS();
+}
+init();
+
+</script>
+</body>
+</html>

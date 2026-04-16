@@ -9,9 +9,10 @@ const pc_config = {
 const pc = new RTCPeerConnection(pc_config);
 
 // STORM control WebSocket (to C++ relay)
-const CONTROL_SERVER_URL = "ws://192.168.1.123:1909";  // adjust IP as needed
-const GUI_SENDER_ID = "3";    // GUI process ID
-const CONTROLLER_ID = "1";    // Controller Input process ID
+// const CONTROL_SERVER_URL = "ws://192.168.1.74:1909";  // adjust IP as needed
+const CONTROL_SERVER_URL = "ws://10.10.8.79:1909"
+const GUI_SENDER_ID = "gui";    // GUI process ID
+const CONTROLLER_ID = "controller";    // Controller Input process ID
 
 let controlSocket = null;
 
