@@ -243,7 +243,8 @@ class ControllerClient:
                 print(f"[Controller] Detected Joystick: {self.joystick.joy.get_name()}")
         else:
             print("[Controller] No joystick found with Pygame.")
-            self.stop_event.set() # Stop the script if no controller
+            # self.stop_event.set() # Stop the script if no controller
+            time.sleep(1) # repeatedly try to get controller?
 
         while not self.stop_event.is_set():
             pygame.event.pump()
@@ -260,7 +261,7 @@ class ControllerClient:
                         s["trigger_left"] = self.joystick.get_trigger_left()
                         s["trigger_right"] = self.joystick.get_trigger_right()
                     except IndexError:
-                        pass 
+                        pass
 
                     # Get Button values (mapping varies by OS/Controller)
                     s["button_a"] = self.joystick.get_button_a()
@@ -285,6 +286,8 @@ class ControllerClient:
                     # print()
                     # for key, value in s.items():
                     #     print(f"{key}: {value}")
+            else:
+                pass #TODO reconnection logic here?
 
             time.sleep(0.02) # 50 Hz update rate for polling
 

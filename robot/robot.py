@@ -331,6 +331,7 @@ class RobotClient:
         #TODO FIXME have a callback to check FMS periodically? or like... idk man...
 
         # try to open serial connection to Pico
+        self.serial_port_num = 0
         self.try_open_serial()
 
     def try_open_serial(self):
@@ -372,7 +373,9 @@ class RobotClient:
                     #FIXME autonomous program selector
             if msg_id == 6767:
                 with self.lock:
-                    self.robot_state = RobotState.AUTONOMOUS
+                    # FIXME prevent autonomous so we don't kill someone accidentally
+                    # self.robot_state = RobotState.AUTONOMOUS
+                    pass
 
             # update controller state for robot control
             elif msg_id == 10 and msg.get("sender") == constants["CONTROLLER_INPUT_NAME"]:
@@ -416,7 +419,8 @@ class RobotClient:
             # charge wheel RPM from GUI
             elif msg_id == 31:
                 with self.lock:
-                    self.charge_rpm_setpoint = payload.get("duty")
+                    # FIXME don't spin the wheel either
+                    # self.charge_rpm_setpoint = payload.get("duty")
                     print(f"chrage command: {self.charge_rpm_setpoint}")
 
         except Exception as e:
@@ -445,7 +449,8 @@ class RobotClient:
         cmd.right_back_drive_motor = mecanum_blend(s.left_stick_y, s.left_stick_x, s.right_stick_x)
 
         #Auto alignment: right stick button hold
-        if s.right_stick_button:
+        # if s.right_stick_button:
+        if False: #FIXME this is disabled too for obvious reasons
             rot_dir = 0
             hor_amt = 0 
             dep_amt = 0
@@ -594,6 +599,35 @@ class RobotClient:
                     self.serial.write(data)
                 except Exception as e:
                     print(f"[Robot] Serial write error: {e}")
+                    if not self.serial.is_open:
+                        self.serial.cancel_write()
+                        self.serial.close()
+
+                        self.serial = None
+
+                        try:
+                            self.serial = serial.Serial(f"/dev/ttyACM{self.serial_port_num}", constants["BAUD_RATE"], timeout=0.5)
+                            print(f"[Robot] Serial connected on /dev/ttyACM{self.serial_port_num}")
+                        except Exception as e:
+                            print("[Robot] serial reconnection error")
+                            time.sleep(1)
+                            print("[Robot] switching to next serial port")
+                            self.serial_port_num += 1
+                            if self.serial_port_num > 4:
+                                self.serial_port_num = 0
+            else:
+                try:
+                    print("[Robot] no serial, attempting reconnection")
+                    time.sleep(1)
+                    self.serial = serial.Serial(f"/dev/ttyACM{self.serial_port_num}", constants["BAUD_RATE"], timeout=0.5)
+                    print(f"[Robot] Serial connected on /dev/ttyACM{self.serial_port_num}")
+                except Exception as e:
+                    print("[Robot] serial reconnection error")
+                    time.sleep(1)
+                    print("[Robot] switching to next serial port")
+                    self.serial_port_num += 1
+                    if self.serial_port_num > 4:
+                        self.serial_port_num = 0
 
             time.sleep(1.0 / constants["UPDATE_HZ"])
 
