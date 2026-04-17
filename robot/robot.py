@@ -608,6 +608,8 @@ class RobotClient:
                         try:
                             self.serial = serial.Serial(f"/dev/ttyACM{self.serial_port_num}", constants["BAUD_RATE"], timeout=0.5)
                             print(f"[Robot] Serial connected on /dev/ttyACM{self.serial_port_num}")
+                        except KeyboardInterrupt:
+                            self.stop_event.set()
                         except Exception as e:
                             print("[Robot] serial reconnection error")
                             time.sleep(1)
@@ -621,6 +623,8 @@ class RobotClient:
                     time.sleep(1)
                     self.serial = serial.Serial(f"/dev/ttyACM{self.serial_port_num}", constants["BAUD_RATE"], timeout=0.5)
                     print(f"[Robot] Serial connected on /dev/ttyACM{self.serial_port_num}")
+                except KeyboardInterrupt:
+                        self.stop_event.set()
                 except Exception as e:
                     print("[Robot] serial reconnection error")
                     time.sleep(1)

@@ -32,12 +32,12 @@ To run the robot in test mode, simply connect a gamepad to the robot and go! The
 You can disable this behavior (to run the actual robot code) by following these steps:
 {TODO}
 
-# Button Bindings
+## Button Bindings
 The default button bindings are as below:
 {TODO}
 If you are not using a bluetooth XBox One controller, you may need to add it to `controller_client.py`. Simply copy the `LinuxXboxOneController` class and change the button and axes IDs to match what your controller returns, then add it to the if/elif chain in `read_gamepad_loop` on line 234.
 
-# Constants
+## Constants
 *Pink Blush*'s code is highly configurable. Many different values can be editing without having to dig in the code, in the `constants.toml` file. A guide to TOML can be found [here](https://toml.io/en/). You will need to edit COMPETITION_SERVER_URL and change it to point to the IP of the robot. The port does not need to be changed, since it is hard-coded in `relay_server.cpp`, but if you changed it there then you should change it in `constants.toml`. The serial port of the Pico should default to `/dev/ttyACM0` on Linux. If not, update the `SERIAL_PORT` constant. You may also need to change the driver and apriltag camera device indices.
 
 ## Viewing the GUI
@@ -51,7 +51,7 @@ The robot runs off a single [Raspberry Pi Pico 2](https://wiki.soonerrobotics.or
  * Adafruit BusIO
  * [Earl's arduino-pico library](https://github.com/earlephilhower/arduino-pico)
 
-## TODO List
+# TODO List
  * add WS reconnection logic to fix the `ping/pong timeout` errors we kept getting at competition
  * find a way to reduce bandwidth
  * get Tony's WebRTC camera streaming code working
@@ -61,3 +61,6 @@ The robot runs off a single [Raspberry Pi Pico 2](https://wiki.soonerrobotics.or
  * run apriltag detection on the robot
  * add sequences
  * make actual autonomous programs
+
+## Note:
+Followed this guide to get the xbox controller bluetoothed to the raspberry pi (which I think included things Tony had to do for autonav last year with Twistopher): https://github.com/tschaffter/raspberry-pi/blob/main/doc/bluetooth.md
