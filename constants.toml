@@ -1,4 +1,4 @@
-COMPETITION = true
+COMPETITION = false
 
 # --- Networking constants ---
 COMPETITION_SERVER_URL = "ws://10.10.8.79" # where the relay_server executable is running (normally robot? base station? TODO)
