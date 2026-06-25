@@ -3,54 +3,89 @@
 //TODO: Define pins
 
 // === STORM Bus ===
-const Address ADDRESS = Address.drive;
-StormBus bus = StormBus(ADDRESS);
-StormMessage msg;
+// we are the drive board, so only listen for messages addressed to us
+StormBus bus = StormBus(Address.drive, PIN_LED_BUILTIN);
+std::shared_ptr<StormMessage> msg;
 // =================
 
+// MecanumDrive drivebase = MecanumDrive(); //TODO
 
 void setup() {
     //TODO: pinmodes? other stuff? idk
 
+    //drivebase.Init();
+
+    // start communication
     bus.Init();
 }
 
 
 void loop() {
-    bus.Tick(); //TODO ???
-    // have StormBus automatically blink LED or something
+    //TODO: have StormBus automatically blink LED or something
+
+    // if there is a message addressed to us
     if (bus.HasMessage()) {
+        // get the message
         msg = bus.GetMessage();
 
-        switch (msg.type) {
-            case Message.Configuration:
-                auto converted = msg.AsConfigurationMessage();
+        // and do something diffrent based on what message it is
+        switch (msg->type) {
+            // standard messages everyone receives
+            case Configuration: {
+                auto converted = msg->AsConfiguration();
 
-                if (converted.ConfigID == DrivePID_ID) {
-                    drivebase.PIDController.SetP(StormMessage.ConfigValue);
-                }
+                // bus.CONFIG[converted.ID] = converted.value;
+
+                //TODO: if there are PID constants n stuff then update the drivebase object
                 
                 break;
-            case Message.Drive:
-                auto converted = msg.AsDriveMessage();
+            }
+            case ConfigComplete: {
+                auto converted = msg->AsConfigurationComplete();
 
-                drivebase.Drive(
-                    converted.ForwardVelocity,
-                    converted.SidewasVelocity,
-                    converted.RotationalVelocity
-                );
-
+                //TODO: if we aren't initialized yet, then we can be
+                //drivebase.SetMotionAllowed(true);
+                
                 break;
+            }
+            case RobotVelocity: {
+                auto converted = msg->AsRobotVelocity();
+
+                //TODO
+                //drivebase.drive(converted.forward, converted.sideways, converted.rotational);
+                
+                break;
+            }
+            case DriveVelocity: {
+                auto converted = msg->AsDriveVelocity();
+
+                //TODO
+                //drivebase.drive(converted.forward, converted.sideways, converted.rotational);
+                
+                break;
+            }
+            case DriveVoltage: {
+                auto converted = msg->AsDriveVoltage();
+
+                //TODO
+                //drivebase.drive(converted.forward, converted.sideways, converted.rotational);
+                
+                break;
+            }
+            case DriveRaw: {
+                auto converted = msg->AsDriveRaw();
+
+                //TODO
+                //drivebase.drive(converted.forward, converted.sideways, converted.rotational);
+                
+                break;
+            }
             default:
                 //TODO
+                break;
         }
-
-        //TODO: handle signal light
-    } else if (bus.HeartbeatFail) {
-        drivebase.depower();
-        shutdown();
     }
 
     //TODO: handle checking encoders, controlling velocities, etc.
-    //TODO: handle debug LEDs
+    //TODO: handle debug LEDs (blink as fast as we are trying to go, as % of max or something)
 }

@@ -1,5 +1,4 @@
 #pragma once
-#include <stdio.h>
 #include <stdint.h>
 
 enum Address {
@@ -13,15 +12,15 @@ enum Address {
 };
 
 enum Message {
-    Request = 10,
+    ComputerRequest = 10,
     Heartbeat = 11,
-    FirmwareConfiguration = 12,
-    ConfigurationComplete = 13,
+    Configuration = 12,
+    ConfigComplete = 13,
     RobotVelocity = 20,
-    MotorVelocity = 21,
-    MotorVoltage = 22,
-    MotorOutput = 23,
-    MotorFeedback = 24,
+    DriveVelocity = 21,
+    DriveVoltage = 22,
+    DriveRaw = 23,
+    DriveFeedback = 24,
     BatteryVoltage = 25,
     TaskCommand = 30,
     TaskResponse = 31,
@@ -39,97 +38,115 @@ typedef struct Request {
 } Request;
 
 // ID 11
-typedef struct HeartbeatMessage {
+typedef struct HeartbeatMsg {
     char b = 0xFF; //TODO FIXME
-} HeartbeatMessage;
+} HeartbeatMsg;
 
 // ID 12
-typedef struct FirmwareConfigurationMessage {
+typedef struct ConfigurationMsg {
     uint8_t type;
     uint8_t ID;
     //TODO
-} FirmwareConfigurationMessage;
+} ConfigurationMsg;
 
 // ID 13
-typedef struct ConfigurationCompleteMessage {
-    //TODO
-} ConfigurationCompleteMessage;
+typedef struct ConfigCompleteMsg {
+    char b = 0x00;
+} ConfigCompleteMsg;
 
 // ID 20
-typedef struct RobotVelocityMessage {
+typedef struct RobotVelocityCmd {
     int16_t forward_velocity;
     int16_t sideways_velocity;
     int16_t rotational_velocity;
-} RobotVelocityMessage;
+} RobotVelocityCmd;
 
 // ID 21
-typedef struct MotorVelocity {
+typedef struct DriveVelocityCmd {
     int16_t front_left_velocity;
     int16_t front_right_velocity;
     int16_t back_left_velocity;
     int16_t back_right_velocity;
-} MotorVelocity;
+} DriveVelocityCmd;
 
 // ID 22
-typedef struct MotorVoltage {
+typedef struct DriveVoltageCmd {
     int16_t front_left_voltage;
     int16_t front_right_voltage;
     int16_t back_left_voltage;
     int16_t back_right_voltage;
-} MotorVoltage;
+} DriveVoltageCmd;
 
 // ID 23
-typedef struct MotorOutput {
-    int16_t front_left_output;
-    int16_t front_right_output;
-    int16_t back_left_output;
-    int16_t back_right_output;
-} MotorOutput;
+typedef struct DriveRawCmd {
+    int16_t front_left_raw;
+    int16_t front_right_raw;
+    int16_t back_left_raw;
+    int16_t back_right_raw;
+} DriveRawCmd;
 
 // ID 24
-typedef struct MotorFeedback {
+typedef struct DriveFeedbackRsp {
     int16_t forward_velocity;
     int16_t sideways_velocity;
     int16_t rotational_velocity;
     int16_t delta_x;
     int16_t delta_y;
     int16_t delta_theta;
-} MotorFeedback;
+} DriveFeedbackRsp;
 
 // ID 25
-typedef struct BatteryVoltage {
+typedef struct BatteryVoltageRsp {
     uint8_t voltage;
-} BatteryVoltage;
+} BatteryVoltageRsp;
 
 // ID 30
-typedef struct TaskCommand {
-    char TEMPORARY;
-} TaskCommand;
+typedef struct TaskCommandCmd {
+    //FIXME - message not defined yet
+    int16_t intake_velocity;
+    uint8_t arm_position;
+    uint16_t climber_position;
+    uint8_t charging_wheel_velocity;
+} TaskCommandCmd;
 
 // ID 31
-typedef struct TaskResponse {
-    char TEMPORARY;
-} TaskResponse;
+typedef struct TaskResponseRsp {
+    //FIXME - message not defined yet
+    int16_t intake_velocity;
+    uint8_t arm_position;
+    uint16_t climber_position;
+    uint8_t charging_wheel_velocity;
+} TaskResponseRsp;
 
 // ID 40
-typedef struct SensorResponse {
-    char TEMPORARY;
-} SensorResponse;
+typedef struct SensorResponseRsp {
+    //FIXME - message not defined yet
+    int8_t robot_current;
+    uint16_t arm_distance;
+    uint16_t back_distance;
+    bool intake_possession;
+} SensorResponseRsp;
 
 // ID 50
-typedef struct ServoCommand {
-    char TEMPORARY;
-} ServoCommand;
+typedef struct ServoCommandCmd {
+    //FIXME - message not defined yet
+    uint8_t arm_position;
+    int8_t wrist_position;
+    bool claw_toggle;
+    //TODO: other servos here
+} ServoCommandCmd;
 
 // ID 60
-typedef struct GameCommand {
+typedef struct GameCommandCmd {
+    //FIXME - message not defined yet
     char TEMPORARY;
-} GameCommand;
+} GameCommandCmd;
 
 // ID 61
-typedef struct GameResponse {
+typedef struct GameResponseRsp {
+    //FIXME - message not defined yet
     char TEMPORARY;
-} GameResponse;
+} GameResponseRsp;
 
 // ================================================
 
@@ -137,6 +154,22 @@ class StormMessage {
 public:
     Message type;
     Address address;
+    uint8_t size;
+    char DATA[16];
+
+    StormMessage(Message type, Address address, uint8_t size, char* data) {
+        this->type = type;
+        this->address = address;
+        this->size = size;
+        
+        for (uint8_t i = 0; i < size; i++) {
+            DATA[i] = data[i];
+        }
+    }
+
+    ~StormMessage() {
+        //TODO
+    }
 
     // message conversion methods
     Request AsRequest() {
@@ -145,76 +178,123 @@ public:
         return msg; 
     }
 
-    Heartbeat AsHeartbeat() {
-        Heartbeat msg;
+    HeartbeatMsg AsHeartbeat() {
+        HeartbeatMsg msg;
 
         //TODO
 
         return msg;
     }
 
-    FirmwareConfiguration AsFirmwareConfiguration() {
-        FirmwareConfiguration msg;
+    ConfigurationMsg AsConfiguration() {
+        ConfigurationMsg msg;
 
         //TODO
 
         return msg;
     }
 
-    ConfigurationComplete AsConfigurationComplete() {
-        ConfigurationComplete msg;
+    ConfigCompleteMsg AsConfigurationComplete() {
+        ConfigCompleteMsg msg;
 
         //TODO
 
         return msg;
-
     }
 
-    RobotVelocity AsRobotVelocity() {
+    RobotVelocityCmd AsRobotVelocity() {
+        RobotVelocityCmd cmd;
+
         //TODO
+
+        return cmd;
     }
 
-    MotorVelocity AsMotorVelocity() {
+    DriveVelocityCmd AsDriveVelocity() {
+        DriveVelocityCmd cmd;
+
         //TODO
+
+        return cmd;
     }
 
-    MotorVoltage AsMotorVoltage() {
+    DriveVoltageCmd AsDriveVoltage() {
+        DriveVoltageCmd cmd;
+
         //TODO
+
+        return cmd;
     }
 
-    MotorOutput AsMotorOutput() {
+    DriveRawCmd AsDriveRaw() {
+        DriveRawCmd cmd;
+
         //TODO
+
+        return cmd;
     }
 
-    MotorFeedback AsMotorFeedback() {
+    DriveFeedbackRsp AsDriveFeedback() {
+        DriveFeedbackRsp rsp;
+
         //TODO
+
+        return rsp;
     }
 
-    BatteryVoltage AsBatteryVoltage() {
+    BatteryVoltageRsp AsBatteryVoltage() {
+        BatteryVoltageRsp rsp;
+        
         //TODO
+
+        return rsp;
     }
 
-    TaskCommand AsTaskCommand() {
+    TaskCommandCmd AsTaskCommand() {
+        TaskCommandCmd cmd;
+        
         //TODO
+
+        return cmd;
     }
 
-    TaskResponse AsTaskResponse() {
+    TaskResponseRsp AsTaskResponse() {
+        TaskResponseRsp rsp;
+
         //TODO
+
+        return rsp;
     }
 
-    SensorResopnse AsSensorResponse() {
+    SensorResponseRsp AsSensorResponse() {
+        SensorResponseRsp rsp;
+        
         //TODO
+
+        return rsp;
     }
 
-    ServoCommand AsServoCommand() {
+    ServoCommandCmd AsServoCommand() {
+        ServoCommandCmd cmd;
+        
         //TODO
+
+        return cmd;
     }
 
-    GameCommand AsGameCommand() {
+    GameCommandCmd AsGameCommand() {
+        GameCommandCmd cmd;
+        
         //TODO
+
+        return cmd;
     }
 
-    GameResponse AsGameResponse() {
+    GameResponseRsp AsGameResponse() {
+        GameResponseRsp rsp;
+        
         //TODO
+
+        return rsp;
     }
 };

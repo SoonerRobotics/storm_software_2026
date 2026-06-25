@@ -21,14 +21,25 @@ uint8_t battery_voltage_scaler = 18; // ID 15
 
 class StormBus {
 public:
-    StormBus(uint8_t address) {
-        //TODO: any kind of setup stuff I guess
+    // === configuration parameters ===
+    const int16_t CONFIG[255] = {};
+    //TODO: update this array with default values
+    // ================================
+
+    StormBus(uint8_t address, uint8_t builtin_led_pin) {
+        //TODO: any kind of setup stuff I guess (make Serial and RS485 objects)
         this->address = address;
+        this->BUILTIN_LED_PIN = builtin_led_pin;
     }
-    ~StormBus() {}
+
+    ~StormBus() {
+        //TODO: should probably do something here...
+    }
 
     bool Init() {
         //TODO: Serial.begin() and stuff, and something with the receive enable pins I guess
+        
+        digitalWrite(BUILTIN_LED, HIGH);
     }
 
     //TODO: rename this to uint8_t GetMessage() and have it return the address
@@ -59,14 +70,19 @@ public:
     std::shared_ptr<StormMessage> GetMessage() {
         //TODO
 
+        StormMessage msg = StormMessage();
 
+        auto ptr = std::make_shared<StormMessage>(msg);
 
-        return nullptr;
+        return ptr;
     }
 
     bool SendResponse(StormMessage msg) {
+        //TODO
+
         return true; // return true on success
     }
+
 private:
     // === protocol definitions ===
     const char START_BYTE = 0x55;
@@ -74,4 +90,6 @@ private:
     char DATA[16]; //FIXME ???
     const char END_BYTE = 0xAA;
     // ============================
+
+    int BUILTIN_LED_PIN = 25; // default on Pico 2
 };
