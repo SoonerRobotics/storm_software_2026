@@ -60,7 +60,9 @@ void loop() {
                 auto converted = msg->AsDriveVelocity();
 
                 //TODO
-                //drivebase.drive(converted.forward, converted.sideways, converted.rotational);
+                //drivebase.SetMotorVelocities(
+                // 
+                // );
                 
                 break;
             }
@@ -68,7 +70,9 @@ void loop() {
                 auto converted = msg->AsDriveVoltage();
 
                 //TODO
-                //drivebase.drive(converted.forward, converted.sideways, converted.rotational);
+                //drivebase.SetMotorVoltages(
+                    // converted.forward, converted.sideways, converted.rotational
+                // );
                 
                 break;
             }
@@ -76,7 +80,9 @@ void loop() {
                 auto converted = msg->AsDriveRaw();
 
                 //TODO
-                //drivebase.drive(converted.forward, converted.sideways, converted.rotational);
+                //drivebase.SetMotorRaw(
+                    // converted.forward, converted.sideways, converted.rotational
+                // );
                 
                 break;
             }

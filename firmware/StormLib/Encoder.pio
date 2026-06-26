@@ -1,0 +1,20 @@
+
+.fifo txrx    ; 4 TX, 4 RX
+
+; .clock_div ; ???
+; .mov_status settings?
+; .in <count> (left|right) (auto) <threshold> ;???
+
+.program Encoder
+.pio_version RP2350 ; we're using the Pico 2
+
+.wrap_target        ; jump to here after reaching end of program
+
+; check A pin
+if (A == high) {
+    if (B == high) {
+        ; we're in the middle of 
+; check B pin
+
+
+.wrap               ; end of program
