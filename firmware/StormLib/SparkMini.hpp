@@ -5,12 +5,9 @@ const unsigned int full_reverse = 500; // micros
 const unsigned int neutral = 1500; // micros
 const unsigned int forward = 2500; // micros
 const unsigned int input_freq = 100; // Hz
-const unsigned int watchdog_timeout = 65.5; // ms
+const unsigned int watchdog_timeout = 65; // ms
 
-// PWM frequency calculated from page 1084 of the RP2350 datasheet
-
-// if we set phase-correct mode we can halve the output frequency
-
+// PWM frequency calculated from page 1084 of the RP2350 datasheet:
 // TOP can range from 0 to 65_536
 // we need the period to range from ~400 to ~2600 us
 // period (in # clock cycles) = (top + 1) * (phase_correct? + 1) * (div_int + div_frac/16)
@@ -21,10 +18,12 @@ const unsigned int watchdog_timeout = 65.5; // ms
 // and the maximum period is 389805
 // that is obviously too much, and to fit it into TOP we need to divide it by like, 5.947
 // so a clock divider of 6? which gives us a frequency of 381.5 Hz at maximum TOP value
-// which is alright I guess. note this is WITHOUT phase correct set.
+// which is alright I guess. note this is WITHOUT phase correct set, so we need to set a divider of 3.
+
 
 /**
  * TODO: write a bunch of documentation n stuff
+ * also note most functions return a bool, if false something bad happened and you should show it via debug LED
  */
 class SparkMini {
 public:
@@ -32,6 +31,8 @@ public:
         this->out_pin = OUTPUT_PIN;
 
         this->has_encoder = false;
+
+        this->initialized = false;
     }
 
     SparkMini(unsigned int OUTPUT_PIN, unsigned int ENC_A_PIN, unsigned int ENC_B_PIN) {
@@ -40,11 +41,13 @@ public:
         this->enc_b_pin = ENC_B_PIN;
 
         this->has_encoder = true;
+
+        this->initialized = false;
     }
 
     ~SparkMini();
 
-    void Init() {
+    bool Init() {
         //TODO: initalization n stuf I guess
 
         // pin mode
@@ -52,22 +55,24 @@ public:
         // PIO setup
 
         this->initialized = true;
+
+        return this->initialized;
     }
 
     //TODO: do we want to do something like a MotorSafety or EStoppable interface like WPILib?
-    void Depower() {
+    bool Stop() {
         // TODO
     }
 
-    void SetRaw(int16_t raw_output) {
+    bool SetRaw(int16_t raw_output) {
         // TODO
     }
 
-    void SetVelocity() {
+    bool SetVelocity() {
         // TODO
     }
 
-    void SetVoltage() {
+    bool SetVoltage() {
         // TODO: figure out what output corresponds to what voltage on the output or somethin
     }
 private:

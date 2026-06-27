@@ -1,6 +1,12 @@
 #pragma once
 #include <stdint.h>
 
+/**
+ * Unique number indicating who the message is for.
+ * Only the computer (#1) can send messages on its own initiative.
+ * If more boards are created, add them after the "game" board.
+ * The special address number 0 indicates the message is for all boards.
+ */
 enum Address {
     all = 0,
     computer = 1,
@@ -11,6 +17,10 @@ enum Address {
     game = 6
 };
 
+/**
+ * The unique message ID of the message.
+ * See the STORM 2027 Serial Specification for which messages carry what data
+ */
 enum Message {
     ComputerRequest = 10,
     Heartbeat = 11,
