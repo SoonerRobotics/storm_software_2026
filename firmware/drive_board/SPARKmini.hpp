@@ -7,13 +7,17 @@ public:
         //TODO
     }
 
-    //TODO: destructor
+  ~SPARKmini();
  
 
     void SetVoltage(float voltage) {
         //TODO
     }
 
+    void SetRaw(float raw) {
+        //TODO
+    }
+
 private:
     //TODO
-}
+};

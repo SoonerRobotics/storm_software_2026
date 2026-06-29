@@ -1,20 +1,43 @@
 
+/**
+When only SHIFTCTRL_FJOIN_RX_PUT is set (in SM0_SHIFTCTRL through SM3_SHIFTCTRL), the system can also read the RX
+FIFO registers with random access via RXF0_PUTGET0 through RXF0_PUTGET3 (where RXFx indicates which state
+machine’s FIFO is being accessed). In this state, the FIFO register storage is repurposed as status registers, which the
+state machine can update at any time and the system can read at any time. For example, a quadrature decoder program
+could maintain the current step count in a status register at all times, rather than pushing to the RX FIFO and potentially
+blocking
+
+PAGE 897
+*/
+
+
 .fifo txrx    ; 4 TX, 4 RX
 
 ; .clock_div ; ???
 ; .mov_status settings?
 ; .in <count> (left|right) (auto) <threshold> ;???
+; probably have <count> = 32? and left? (auto)?
+; no autopush
+
+; TODO: set PINDIRS (for in/out?) and PINS
 
 .program Encoder
 .pio_version RP2350 ; we're using the Pico 2
 
 .wrap_target        ; jump to here after reaching end of program
 
-; check A pin
-if (A == high) {
-    if (B == high) {
-        ; we're in the middle of 
-; check B pin
+; shift the 2 bits (1 from pin A, 1 from pin B) into the input shift register (ISR)
+IN PINS, 2
 
+; OR we can do MOV X, PINS to get something, also SHIFTCTRL_IN_COUNT and PINCTRL_IN_BAE ar important
+
+; TODO: actual logic
+
+; increment loop counter
+SET X, X + 1
+
+; can only SET from 0 to 31 (only 5 bits)
+; so the loop counter can only tick up to 31,
+; we should store it in a FIFO or something?
 
 .wrap               ; end of program

@@ -1,9 +1,11 @@
 #pragma once
 #include <memory>
-#include "StormMessage.hpp"
 #include <stdlib_noniso.h>
 
-#define BAUD_RATE 9600 //TODO: we can probably do a lot faster, should at least consider increasing to 115200
+#include <ArduinoRS485.h>
+
+#include "StormMessage.hpp"
+
 
 // configuration parameters -- throw these in a struct?
 int16_t linear_velocity_scaler = 3000; // ID 11
@@ -12,24 +14,11 @@ int16_t motor_velocity_scaler = 100; // ID 13 RENAME because we will have other 
 int16_t motor_voltage_scaler = 2500; // ID 14
 uint8_t battery_voltage_scaler = 18; // ID 15
 
-// struct StormMessage {
-//     char START_BYTE = 0x55;
-//     uint8_t address;
-//     uint8_t id;
-//     utin8_t size;
-//     char* data[size];
-//     char END_BYTE = 0xAA;
-// };
 
 class StormBus {
 public:
-    // === configuration parameters ===
-    const int16_t CONFIG[255] = {};
-    //TODO: update this array with default values
-    // ================================
-
+    //TODO we will need tx, de, and re pins as well
     StormBus(uint8_t address, uint8_t builtin_led_pin) {
-        //TODO: any kind of setup stuff I guess (make Serial and RS485 objects)
         this->address = address;
         this->BUILTIN_LED_PIN = builtin_led_pin;
     }
@@ -38,9 +27,12 @@ public:
         //TODO: should probably do something here...
     }
 
+    /**
+     * TODO: document
+     */
     bool Init() {
         //TODO FIXME
-        RS485.setPins(txPin, dePin, rePin);
+        RS485.setPins(this->txPin, this->dePin, this->rePin);
 
         RS485.begin(BAUD_RATE);
 
@@ -48,64 +40,94 @@ public:
             RS485.receive(); // enable receiving messages
         }
         
-        digitalWrite(BUILTIN_LED, HIGH);
+        digitalWrite(this->BUILTIN_LED_PIN, HIGH);
+
+        return true;
     }
 
+    /**
+     * TODO: document
+     */
     //TODO: rename this to uint8_t GetMessage() and have it return the address
     bool HasMessage() {
-        // StormMessage object
-        //TODO we should store this in this object or something... so GetMessage() can retrieve it...
-        StormMessage msg = StormMessage();
+        Address tempAddress;
+        Message tempType;
+        uint8_t tempSize;
+        char tempDATA[16];
 
         // minimum message size, according to spec, is 6 bytes
-        //FIXME that should be #define'd or something
-        if (RS485.available() < 6) {
+        if (RS485.available() < this->MIN_MSG_SIZE) {
             return false;
         }
         
         // check for start byte (0xAA)
-        if (RS485.read() != START_BYTE) {
-            // TODO: read consecutively for this byte maybe ???
-            // yes we absolutely need to do that FIXME
+        bool foundMsg = false;
+        while (RS485.peek() != -1) {
+            if (RS485.read() == this->START_BYTE) {
+                foundMsg = true;
+                break;
+            }
+        }
+
+        if (!foundMsg) {
             return false;
         }
 
         //FIXME: I don't think we need all these peek() calls, like, we already checked serial.available()
 
-        //TODO: also handle heartbeat
-
         // next byte is address
-        if (RS480.peek() != -1) {
-            auto address = RS485.read();
+        if (RS485.peek() != -1) {
+            tempAddress = RS485.read();
 
-            //TODO FIXME we should check for just our address or 0 instead
-            if (address < 0 || address > Address::game) {
+            // handle broadcast messages (like heartbeat)
+            if (tempAddress == Address::all) {
+                //TODO handle heartbeat
+
+                return false; // ???
+            } else if (tempAddress != this->address) {
                 return false;
             }
         }
 
+        // next byte is type
+        if (RS485.peek() != -1) {
+            tempType = RS485.read();
+        }
+
         // next byte is size
         if (RS485.peek() != -1) {
-            auto size = RS485.read();
+            tempSize = RS485.read();
 
             // maximum message size is 16 according to the spec
-            //FIXME should that be #define'd somewhere?
-            if (size < 0 || size > 16) {
+            if (tempSize < 0 || tempSize > this->MAX_MSG_SIZE) {
                 return false;
             }
         }
 
         // next bytes are data
         //TODO: read SIZE bytes into DATA
+        for (int i = 0; i < tempSize; i++) {
+            tempDATA[i] = RS485.read();
+        }
 
         // read stop byte
         if (RS485.peek() != -1) {
-            if (RS485.read() != END_BYTE) {
+            if (RS485.read() != this->END_BYTE) {
                 return false;
             }
         }
 
-        return false;
+        //FIXME this will conflict with like, the address variable we should do something
+        this->address = tempAddress;
+        this->size = tempSize;
+        this->type = tempType;
+
+        // transfer DATA too
+        for (int i = 0; i < this->size; i++) {
+            DATA[i] = tempDATA[i];
+        }
+
+        return true;
     }
 
     /**
@@ -133,10 +155,10 @@ public:
         RS485.beginTransmission();
 
         // write start byte
-        RS485.write(START_BYTE);
+        RS485.write(this->START_BYTE);
 
         // write address (always computer for a response)
-        RS485.write(Address::computer);
+        RS485.write(msg.address);
 
         // write message ID
         RS485.write(msg.type);
@@ -150,7 +172,7 @@ public:
         }
 
         // write end byte
-        RS485.write(END_BYTE);
+        RS485.write(this->END_BYTE);
 
         // wait for entire buffer to send
         RS485.flush();
@@ -163,10 +185,22 @@ public:
 private:
     // === protocol definitions ===
     const char START_BYTE = 0xAA;
-    uint8_t address;
+    uint8_t address = 255;
+    uint8_t size = 255;
+    uint8_t type = 255;
     char DATA[16]; //FIXME ???
     const char END_BYTE = 0x55;
+    const unsigned int BAUD_RATE = 115200;
+
+    const uint8_t MAX_DATA_SIZE = 12;
+    const uint8_t MIN_DATA_SIZE = 1;
+    const uint8_t MAX_MSG_SIZE = 16;
+    const uint8_t MIN_MSG_SIZE = 6;
     // ============================
 
+    // pins
+    int txPin = 0; //TODO FIXME
+    int dePin = 0;
+    int rePin = 0;
     int BUILTIN_LED_PIN = 25; // default on Pico 2
 };

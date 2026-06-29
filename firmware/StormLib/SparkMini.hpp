@@ -27,6 +27,9 @@ const unsigned int watchdog_timeout = 65; // ms
  */
 class SparkMini {
 public:
+    /**
+     * TODO: document this
+     */
     SparkMini(unsigned int OUTPUT_PIN) {
         this->out_pin = OUTPUT_PIN;
 
@@ -35,6 +38,9 @@ public:
         this->initialized = false;
     }
 
+    /**
+     * TODO: document this
+     */
     SparkMini(unsigned int OUTPUT_PIN, unsigned int ENC_A_PIN, unsigned int ENC_B_PIN) {
         this->out_pin = OUTPUT_PIN;
         this->enc_a_pin = ENC_A_PIN;
@@ -47,34 +53,85 @@ public:
 
     ~SparkMini();
 
+    /**
+     * TODO: document this
+     */
     bool Init() {
-        //TODO: initalization n stuf I guess
+        // pin modes
 
-        // pin mode
+        //TODO: set each GPIO function (Section 9.4, page 589)
+        //TODO: also configure the pads (section 9.6, page 595)
+
+        pinMode(this->out_pin, OUTPUT);
+        pinMode(this->enc_a_pin, INPUT);
+        pinMode(this->enc_b_pin, INPUT);
+
         // PWM configuration
+        //FIXME: do like, the actual PWM with the TOP register and clock divider and everything
+        analogWriteResolution(8);
+        analogWriteFreq(333); // this is what worked last year
+
         // PIO setup
+        //TODO: figure this out. likely copy this repo: https://github.com/pmarques-dev/PicoEncoder
+        //TODO: attach encoder interrupts
+
+        this->lastCmdTime = 0;
 
         this->initialized = true;
 
         return this->initialized;
     }
 
-    //TODO: do we want to do something like a MotorSafety or EStoppable interface like WPILib?
+    /**
+     * TODO: document this
+     */
     bool Stop() {
-        // TODO
+        this->initialized = false;
+        this->lastCmdTime = 999999999;
+
+        // depower the actuators
+        digitalWrite(this->out_pin, LOW);
+
+        // detach encoder interrupts
+        //TODO
     }
 
+    /**
+     * TODO: document this
+     */
+    bool UpdateEncoder() {
+        //TODO
+    }
+
+    /**
+     * TODO: document this
+     */
     bool SetRaw(int16_t raw_output) {
+        float16_t scaled = raw_output / MAX_INT16;
+
+        uint8_t output = 255 * scaled;
+
+        //TODO FIXME: make this like, the actual PWM stuff
+        analogWrite(this->out_pin, output);
+
+        return true;
+    }
+
+    /**
+     * TODO: document this
+     */
+    bool SetVelocity(int16_t velocity) {
         // TODO
     }
 
-    bool SetVelocity() {
-        // TODO
-    }
-
-    bool SetVoltage() {
+    /**
+     * TODO: document this
+     */
+    bool SetVoltage(uint8_t voltage, uint8_t battVoltage) {
         // TODO: figure out what output corresponds to what voltage on the output or somethin
+        // for now, assume MAX_UINT8_T is 12 volts
     }
+
 private:
     //TODO: whenever we do pins check if they are 0 and disallow if so
     unsigned int out_pin = 0;
@@ -83,4 +140,5 @@ private:
     bool has_encoder = false;
 
     bool initialized = false;
+    unsigned long lastCmdTime = 0;
 };

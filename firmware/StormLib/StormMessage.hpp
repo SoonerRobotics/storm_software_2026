@@ -160,6 +160,10 @@ typedef struct GameResponseRsp {
 
 // ================================================
 
+
+/**
+ * TODO: document
+ */
 class StormMessage {
 public:
     Message type;
@@ -167,16 +171,24 @@ public:
     uint8_t size;
     char DATA[16];
 
+    /**
+    * TODO: document
+    */
     StormMessage(Message type, Address address, uint8_t size, char* data) {
         this->type = type;
         this->address = address;
         this->size = size;
+
+        //TODO: check to see if this makes a legal message and if not, idk do something
         
         for (uint8_t i = 0; i < size; i++) {
             DATA[i] = data[i];
         }
     }
 
+    /**
+    * TODO: document
+    */
     ~StormMessage() {
         //TODO
     }
@@ -184,6 +196,8 @@ public:
     // message conversion methods
     Request AsRequest() {
         Request msg;
+
+        //TODO
 
         return msg; 
     }
